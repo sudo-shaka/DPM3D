@@ -1,10 +1,8 @@
 import DPM3D
-from PlotDPM3D import plotcell
 import matplotlib.pyplot as plt
 import imageio
 from progressbar import progressbar
 import os
-#os.system('find /tmp/ -maxdepth 1 -iname "*.png" -delete')
 
 Cell = DPM3D.Cell(x1=0,y1=0.0,z1=0.0,calA0=1.05,VertexRecursion=3,Kv = 1.0, Ka = 0.05, Kb = 0.05)
 
@@ -18,9 +16,6 @@ for i in range(nout):
     print(Cell.GetVolume(),Cell.GetSA())
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(projection='3d')
-    ax.set_ylim(-1.5,1.5)
-    ax.set_zlim(minz,minz+2.25)
-    ax.set_xlim(-1.5,1.5)
     ax.view_init(10, -120+(i))
     for tri in Cell.TriangleIndex:
         x = [Cell.Positions[j].x for j in tri];
