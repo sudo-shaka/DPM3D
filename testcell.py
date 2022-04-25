@@ -6,14 +6,13 @@ import os
 
 Cell = DPM3D.Cell(x1=0,y1=0.0,z1=0.0,calA0=1.05,VertexRecursion=3,Kv = 1.0, Ka = 0.05, Kb = 0.05)
 
-nout = 180; dt = 0.01; nsteps = 100;
+nout = 180; dt = 0.001; nsteps = 10;
 
 for i in range(nout):
     for j in range(nsteps):
         Cell.EulerUpdate(1,dt);
         Cell.UpdateShapeForces();
 
-    print(Cell.GetVolume(),Cell.GetSA())
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(projection='3d')
     ax.view_init(10, -120+(i))
