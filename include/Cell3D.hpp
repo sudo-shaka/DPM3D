@@ -40,6 +40,7 @@ namespace DPM3D {
             void StickToSurface(double x, double mindist);
             void SetupSurface(double z);
             void SurfaceStrech(double scale);
+            void ExtendVertex(int vi, double force);
             void Crawling();
             void EulerUpdate(int steps, double dt);
             void EulerUpdate(double dt);
