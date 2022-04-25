@@ -43,7 +43,7 @@ namespace DPM3D{
         AddFaceIndex(0, 7, 10);
         AddFaceIndex(0, 10, 11);
 
-        // 5 adjacent faces 
+        // 5 adjacent faces
         AddFaceIndex(1, 5, 9);
         AddFaceIndex(5, 11, 4);
         AddFaceIndex(11, 10, 2);
@@ -57,7 +57,7 @@ namespace DPM3D{
         AddFaceIndex(3, 6, 8);
         AddFaceIndex(3, 8, 9);
 
-        // 5 adjacent faces 
+        // 5 adjacent faces
         AddFaceIndex(4, 9, 5);
         AddFaceIndex(2, 4, 11);
         AddFaceIndex(6, 2, 10);
@@ -149,7 +149,6 @@ namespace DPM3D{
         int i, ndelay = 20;
         double P, fnorm, fcheck, vnorm, alpha, dtmax,dtmin;
         int npPos, npNeg, fireit;
-
         P=0;
         fnorm = 0.0;
         vnorm = 0.0;
@@ -261,7 +260,7 @@ namespace DPM3D{
             std::cout << "	 dt = " << dt << std::endl;
             std::cout << "	 P = " << P << std::endl;
             std::cout << "	 alpha = " << alpha << std::endl;
-        }        
+        }
     }
 
     void Cell::VolumeForceUpdate(){
@@ -289,7 +288,7 @@ namespace DPM3D{
         double length[3],dli[3],dlim1[3],l0 = sqrt((4*a0)/sqrt(3));
         int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
         std::vector<int> tri{0,0,0};
-        glm::dvec3 center(0.0,0.0,0.0); 
+        glm::dvec3 center(0.0,0.0,0.0);
         std::vector<glm::dvec3> positions(3,center), lv(3,center), ulv(3,center);
         for(i=0;i<ntriangles;i++){
             tri = FaceIndices[i];
@@ -320,7 +319,7 @@ namespace DPM3D{
             areaStrain = (area/a0) - 1.0;
             //for each point
             for(j=0;j<3;j++){
-                Forces[tri[j]] += (Ka/sqrt(a0)) * 0.5 * areaStrain*(positions[j]-positions[ip1[j]]); 
+                Forces[tri[j]] += (Ka/sqrt(a0)) * 0.5 * areaStrain*(positions[j]-positions[ip1[j]]);
             }*/
         }
     }
@@ -365,7 +364,7 @@ namespace DPM3D{
             }
             center /= k;
             flatArea = 0.0;
-            
+
             for(j=0;j<k;j++){
                 if(j != k-1){
                     l1 = distance(center,Positions[usedPositions[j]]);
@@ -381,7 +380,7 @@ namespace DPM3D{
                 flatArea += sqrt(s*(s-l1)*(s-l2)*(s-l3));
             }
             bendingStrain = (surfaceArea/flatArea) -1;
-            Forces[i] += Kb*bendingStrain*(center-Positions[i]);
+            Forces[i] += Kb*bendingStrain*(glm::normalize(center-Positions[i]));
         }
     }
 
@@ -430,6 +429,11 @@ namespace DPM3D{
         }
     }
 
+    void Cell::ExtendVertex(int vi, double kv){
+        glm::dvec3 center = GetCOM();
+        Forces[vi] += kv*glm::normalize(Positions[vi]-center);
+    }
+
     void Cell::SetupSurface(double z){
         glm::dvec3 surfacepos;
         int lenp = (int)sqrt(nsurfacep);
@@ -448,7 +452,7 @@ namespace DPM3D{
             }
             if(Positions[i].y < miny){
                 miny = Positions[i].y;
-            } 
+            }
             if(Positions[i].z < minz){
                 minz = Positions[i].z;
             }
@@ -565,7 +569,7 @@ namespace DPM3D{
         cache[0] = key; cache[1] = i;
         midpointCache.push_back(cache);
         return i;
-        
+
     }
 
     void Cell::AddVertex(glm::dvec3 vec){

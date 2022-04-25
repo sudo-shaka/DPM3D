@@ -48,6 +48,7 @@ void init_Cell(py::module &m){
     .def("StickToSurface",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurface),py::arg("xpos"),py::arg("mindist"))
     .def("SurfaceInit",py::overload_cast<double>(&DPM3D::Cell::SetupSurface),py::arg("zpoz"))
     .def("StretchSurface",py::overload_cast<double>(&DPM3D::Cell::SurfaceStrech),py::arg("scale"))
+    .def("ExtendVertex",py::overload_cast<int,double>(&DPM3D::Cell::ExtendVertex),py::arg("vertexidx"),py::arg("Force"))
     .def("Crawling",&DPM3D::Cell::Crawling)
     .def("GetVolume",&DPM3D::Cell::GetVolume)
     .def("GetSA",&DPM3D::Cell::GetSurfaceArea)
