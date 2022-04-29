@@ -9,7 +9,7 @@
 #include <glm/gtx/norm.hpp>
 
 namespace DPM3D{
-    //constructors
+    //contructors. This code generates an isohedron
     Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _Kv, double _Ka, double _Kb){
         calA0 = _calA0;
         Kv = _Kv;
@@ -253,27 +253,29 @@ namespace DPM3D{
     }
 
     void Cell::VolumeForceUpdate(){
+        //Find the volume contibution of each face using the determinate of the 3x3 position matrix for each face
         double volume = GetVolume(),dist, nucdist = (0.5*pow((3*v0)/(4*M_PI),(1/3)));
         double volumeStrain = (volume/v0) - 1.0;
         glm::dvec3 center = GetCOM(),tmp;
         std::vector<int> tri{0,0,0};
         int i,j;
         for(i=0;i<ntriangles;i++){
+            
             tri = FaceIndices[i];
             tmp = glm::cross((Positions[tri[1]]-center)- (Positions[tri[0]]-center),
                 (Positions[tri[2]]-center) - (Positions[tri[0]]-center));
             tmp = glm::normalize(tmp);
             for(j=0;j<3;j++){
                 dist = distance(center,Positions[tri[j]]);
-                if(nucdist < dist)
+                if(nucdist < dist) //standard volume strain update. Move the face with respect to its normal
                     Forces[tri[j]] -= Kv * 0.5 * volumeStrain * (tmp);
-                else
+                else //If the face is approaching the center of mass (nuclous), repel as hard sphere due to nuclear increased stiffness
                    Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Positions[tri[j]]);
             }
         }
     }
     void Cell::AreaForceUpdate(){
-        //double area,areaStrain;
+        //Assume each face is an equalatral tringle. if the area is greater than prefered area, srink the segment lengths that make up that face
         double length[3],dli[3],dlim1[3],l0 = sqrt((4*a0)/sqrt(3));
         int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
         std::vector<int> tri{0,0,0};
@@ -299,6 +301,8 @@ namespace DPM3D{
         }
     }
     void Cell::BendingForceUpdate(){
+        /*Find the sufrace area of triagles surrounding a point. Find the area if the sorrounding geometry if it was flat. 
+        The difference gives you the bending strain. Move that point in the direction of the sourrounding vertecies*/
         int i, j,k,t,c;
         std::vector<std::vector<int>> corner;
         std::vector<int> tri{0,0,0},UsedIndexes,usedPositions;
@@ -360,6 +364,7 @@ namespace DPM3D{
     }
 
     void Cell::ExtendVertex(int vi, double kv){
+        //Function to make the cell stick out a vertex from its center of mass
         glm::dvec3 center = GetCOM();
         Forces[vi] += kv*glm::normalize(Positions[vi]-center);
     }
