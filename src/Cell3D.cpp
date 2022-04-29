@@ -100,17 +100,6 @@ namespace DPM3D{
             Positions[i].y += _y;
             Positions[i].z += _z;
         }
-
-        /*for(i=0;i<ntriangles;i++){
-            std::sort(FaceIndices[i].begin(),FaceIndices[i].end());
-        }
-        for(i=0;i<ntriangles-1;i++){
-            for(j=0;j<ntriangles-i-1;j++){
-                if(FaceIndices[j][0] > FaceIndices[j+1][0]){
-                    std::swap(FaceIndices[j],FaceIndices[j+1]);
-                }
-            }
-        }*/
     }
 
     void Cell::ResetForces(){
@@ -273,11 +262,11 @@ namespace DPM3D{
             tri = FaceIndices[i];
             tmp = glm::cross((Positions[tri[1]]-center)- (Positions[tri[0]]-center),
                 (Positions[tri[2]]-center) - (Positions[tri[0]]-center));
-            //tmp = glm::normalize(tmp);
+            tmp = glm::normalize(tmp);
             for(j=0;j<3;j++){
                 dist = distance(center,Positions[tri[j]]);
                 if(nucdist < dist)
-                    Forces[tri[j]] -= (Kv/sqrt(v0)) * 0.5 * volumeStrain * (tmp);
+                    Forces[tri[j]] -= Kv * 0.5 * volumeStrain * (tmp);
                 else
                    Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Positions[tri[j]]);
             }
@@ -295,7 +284,6 @@ namespace DPM3D{
             for(j=0;j<3;j++){
                 positions[j] = Positions[tri[j]];
             }
-            //center = (positions[0]+positions[1]+positions[2])/3.0;
             for(j=0;j<3;j++){
                 lv[j] = positions[ip1[j]] - positions[j];
                 length[j] = distance(positions[ip1[j]],positions[j]);
@@ -308,19 +296,6 @@ namespace DPM3D{
             for(j=0;j<3;j++){
                 Forces[tri[j]] += (Ka*(sqrt(a0)/l0)) * (dli[j]*ulv[j]-dlim1[j]*ulv[im1[j]]);
             }
-
-            /*lens1 = distance(a,b);
-            lens2 = distance(b,c);
-            lens3 = distance(c,a);
-            s = (lens1+lens2+lens3)/2;
-            area = sqrt(s*(s-lens1)*(s-lens2)*(s-lens3));*/
-
-            /*area = GetArea(i);
-            areaStrain = (area/a0) - 1.0;
-            //for each point
-            for(j=0;j<3;j++){
-                Forces[tri[j]] += (Ka/sqrt(a0)) * 0.5 * areaStrain*(positions[j]-positions[ip1[j]]);
-            }*/
         }
     }
     void Cell::BendingForceUpdate(){
@@ -384,102 +359,9 @@ namespace DPM3D{
         }
     }
 
-    void Cell::StickToSurface(double z, double mindist){
-        glm::dvec3 surfacepos, lv,u;
-        double dist,ftmp;
-        for(int i=0;i<NV;i++){
-            surfacepos = Positions[i];
-            surfacepos.z = z;
-            lv = surfacepos - Positions[i];
-            dist = distance(surfacepos,Positions[i]);
-            u = lv/dist;
-            if(dist < mindist){
-                ftmp = (1.0 - dist/(mindist))/mindist;
-                Forces[i] += (ftmp*u);
-            }
-        }
-    }
-
-    void Cell::Crawling(){
-        int i, j, idx=0;
-        int nsurfacepoints = surfacepositions.size();
-        glm::dvec3 rij;
-        double dist=0.0,tmpdist,distancethresh,ftmp;
-        distancethresh = sqrt((4*a0)/sqrt(3));
-        for(i = 0;i<NV;i++){
-            for(j=0;j<nsurfacepoints;j++){
-                if(j==0){
-                    dist = distance(surfacepositions[j],Positions[i]);
-                    idx = j;
-                }
-                tmpdist = distance(surfacepositions[j],Positions[i]);
-                if(dist < tmpdist){
-                    idx = j;
-                    dist = tmpdist;
-                }
-            }
-            if(dist < distancethresh){
-                rij = surfacepositions[idx] - Positions[i];
-                ftmp = (1.0 - dist/(distancethresh))/distancethresh;
-                Forces[i] += ftmp*(rij/dist);
-            }
-            if(Positions[i].z < surfacepositions[0].z){
-                Forces[i].z += 10*pow((Positions[i].z - surfacepositions[0].z),2);
-            }
-        }
-    }
-
     void Cell::ExtendVertex(int vi, double kv){
         glm::dvec3 center = GetCOM();
         Forces[vi] += kv*glm::normalize(Positions[vi]-center);
-    }
-
-    void Cell::SetupSurface(double z){
-        glm::dvec3 surfacepos;
-        int lenp = (int)sqrt(nsurfacep);
-        int i,j;
-        double maxx=0.0, maxy=0.0, maxz=0.0;
-        double minz=100, miny=100,minx=100;
-        double distx,disty;
-        for(i=0;i<NV;i++){
-            if(i==0){
-                minz = Positions[i].z;
-                miny = Positions[i].y;
-                minx = Positions[i].x;
-            }
-            if(Positions[i].x < minx){
-                minx = Positions[i].x;
-            }
-            if(Positions[i].y < miny){
-                miny = Positions[i].y;
-            }
-            if(Positions[i].z < minz){
-                minz = Positions[i].z;
-            }
-            if(Positions[i].x > maxx){
-                maxx = Positions[i].x;
-            }
-            if(Positions[i].y > maxy){
-                maxy = Positions[i].y;
-            }
-            if(Positions[i].z < maxz){
-                maxz = Positions[i].z;
-            }
-        }
-        distx = (maxx-minx)/lenp;
-        disty = (maxy-miny)/lenp;
-        for(i=0; i<lenp; i++){
-            for(j=0;j<lenp;j++){
-                surfacepos = glm::dvec3(minx+(distx*(double)i),miny+(disty*(double)j),z);
-                surfacepositions.push_back(surfacepos);
-            }
-        }
-    }
-
-    void Cell::SurfaceStrech(double scale){
-        for (int i=0;i<(int)surfacepositions.size();i++){
-            surfacepositions[i].x *= scale;
-        }
     }
 
     double Cell::GetVolume(){
