@@ -4,7 +4,7 @@ import imageio
 from progressbar import progressbar
 import os
 
-Cell = DPM3D.Cell(x1=0,y1=0.0,z1=0.0,calA0=1.05,VertexRecursion=2,Kv = 1.0, Ka = 0.05, Kb = 0.05)
+Cell = DPM3D.Cell(x1=0,y1=0.0,z1=0.0,calA0=1.05,VertexRecursion=2,r0=1,Kv = 1.0, Ka = 0.05, Kb = 0.05)
 
 nout = 180; dt = 0.01; nsteps = 10;
 
