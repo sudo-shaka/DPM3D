@@ -25,7 +25,7 @@ namespace DPM3D {
 
 
             Cell(double x1,double y1, double z1,
-                double calA0,int f,
+                double calA0,int f,double r0,
                 double Kv, double Ka,double Kb);
 
             void ResetForces();
@@ -38,7 +38,9 @@ namespace DPM3D {
             void AreaForceUpdate();
             void BendingForceUpdate();
             void StickToSurface(double x, double mindist);
-            void SetupSurface(double z);
+            void StickToSurface(double mindist);
+            void SetupSurface(int n);
+            void RepelSurface();
             void SurfaceStrech(double scale);
             void ExtendVertex(int vi, double force);
             void Crawling();
