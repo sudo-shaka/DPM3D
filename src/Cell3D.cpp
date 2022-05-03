@@ -9,8 +9,8 @@
 #include <glm/gtx/norm.hpp>
 
 namespace DPM3D{
-    //contructors. This code generates an isohedron
-    Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _Kv, double _Ka, double _Kb){
+    //constructors
+    Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double r0 ,double _Kv, double _Ka, double _Kb){
         calA0 = _calA0;
         Kv = _Kv;
         Ka = _Ka;
@@ -92,10 +92,11 @@ namespace DPM3D{
         Forces.resize(NV);
         ntriangles = FaceIndices.size();
 
-        v0 = GetVolume();
+        v0 = (4.0/3.0)*M_PI*pow(r0,3);
         s0 = pow((6*sqrt(M_PI)*v0*calA0),(2.0/3.0));
         a0 = (s0/(double)ntriangles);
         for(i=0;i<NV;i++){
+            Positions[i] *= r0;
             Positions[i].x += _x;
             Positions[i].y += _y;
             Positions[i].z += _z;
@@ -253,29 +254,27 @@ namespace DPM3D{
     }
 
     void Cell::VolumeForceUpdate(){
-        //Find the volume contibution of each face using the determinate of the 3x3 position matrix for each face
         double volume = GetVolume(),dist, nucdist = (0.5*pow((3*v0)/(4*M_PI),(1/3)));
         double volumeStrain = (volume/v0) - 1.0;
         glm::dvec3 center = GetCOM(),tmp;
         std::vector<int> tri{0,0,0};
         int i,j;
         for(i=0;i<ntriangles;i++){
-            
             tri = FaceIndices[i];
             tmp = glm::cross((Positions[tri[1]]-center)- (Positions[tri[0]]-center),
                 (Positions[tri[2]]-center) - (Positions[tri[0]]-center));
             tmp = glm::normalize(tmp);
             for(j=0;j<3;j++){
                 dist = distance(center,Positions[tri[j]]);
-                if(nucdist < dist) //standard volume strain update. Move the face with respect to its normal
-                    Forces[tri[j]] -= Kv * 0.5 * volumeStrain * (tmp);
-                else //If the face is approaching the center of mass (nuclous), repel as hard sphere due to nuclear increased stiffness
+                if(nucdist < dist)
+                    Forces[tri[j]] -= Kv* 0.5 * volumeStrain * (tmp);
+                else
                    Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Positions[tri[j]]);
             }
         }
     }
     void Cell::AreaForceUpdate(){
-        //Assume each face is an equalatral tringle. if the area is greater than prefered area, srink the segment lengths that make up that face
+        //double area,areaStrain;
         double length[3],dli[3],dlim1[3],l0 = sqrt((4*a0)/sqrt(3));
         int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
         std::vector<int> tri{0,0,0};
@@ -286,6 +285,7 @@ namespace DPM3D{
             for(j=0;j<3;j++){
                 positions[j] = Positions[tri[j]];
             }
+            //center = (positions[0]+positions[1]+positions[2])/3.0;
             for(j=0;j<3;j++){
                 lv[j] = positions[ip1[j]] - positions[j];
                 length[j] = distance(positions[ip1[j]],positions[j]);
@@ -300,9 +300,8 @@ namespace DPM3D{
             }
         }
     }
+
     void Cell::BendingForceUpdate(){
-        /*Find the sufrace area of triagles surrounding a point. Find the area if the sorrounding geometry if it was flat. 
-        The difference gives you the bending strain. Move that point in the direction of the sourrounding vertecies*/
         int i, j,k,t,c;
         std::vector<std::vector<int>> corner;
         std::vector<int> tri{0,0,0},UsedIndexes,usedPositions;
@@ -363,10 +362,123 @@ namespace DPM3D{
         }
     }
 
+    void Cell::StickToSurface(double z, double mindist){
+        glm::dvec3 surfacepos, lv,u,A,B,com = GetCOM();
+        double dist,ftmp;
+        std::vector<int> tri{0,0,0};
+
+        for(int i=0;i<ntriangles;i++){
+            tri = FaceIndices[i];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(int j=0; j<3;j++){
+                surfacepos = Positions[tri[j]];
+                surfacepos.z = z;
+                lv = surfacepos - Positions[tri[j]];
+                dist = distance(surfacepos,Positions[tri[j]]);
+                u = lv/dist;
+                if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
+                    ftmp = (1.0 - dist/(mindist))/mindist;
+                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - com));
+                }
+                if(Positions[tri[j]].z < z){
+                    Forces[tri[j]] += 10*pow((Positions[tri[j]].z - z),2);
+                }
+            }
+        }
+    }
+
+    void Cell::StickToSurface(double mindist){
+        glm::dvec3 lv, u, A,B,com = GetCOM();
+        double dist,ftmp,disttmp;
+        std::vector<int> tri{0,0,0};
+        int ti,vi,si,siclosest;
+
+        for(ti=0;ti<ntriangles;ti++){
+            tri = FaceIndices[ti];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(vi=0;vi<3;vi++){
+                dist = distance(surfacepositions[0],Positions[tri[vi]]);
+                siclosest = 0;
+                for(si=0;si<nsurfacep;si++){
+                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
+                    if(disttmp < dist){
+                        dist = disttmp;
+                        siclosest = si;
+                    }
+                }
+                lv = surfacepositions[si] - Positions[tri[vi]];
+                u = lv/dist;
+                if(Positions[tri[vi]].z < surfacepositions[0].z){
+                    Forces[tri[vi]] += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
+                }
+                else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
+                    ftmp = (1.0 - dist/(mindist))/mindist;
+                    //Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest]- Positions[tri[vi]]));
+                    Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(Positions[tri[vi]] - com));
+                }
+            }
+        }
+    }
+
+    void Cell::RepelSurface(){
+        for(int i =0;i<NV;i++){
+            if(Positions[i].z < surfacepositions[0].z){
+                Forces[i].z += 10*pow((Positions[i].z - surfacepositions[0].z),2);
+            }
+        }
+    }
+
+
     void Cell::ExtendVertex(int vi, double kv){
-        //Function to make the cell stick out a vertex from its center of mass
         glm::dvec3 center = GetCOM();
         Forces[vi] += kv*glm::normalize(Positions[vi]-center);
+    }
+
+    void Cell::SetupSurface(int npoints){
+        nsurfacep = npoints;
+        glm::dvec3 surfacepos,com = GetCOM();
+        int lenp = (int)sqrt(nsurfacep);
+        int i,j;
+        double maxx=0.0, maxy=0.0, maxz=0.0;
+        double minz=Positions[0].z, miny=Positions[0].y,minx=Positions[0].x;
+        double distx,disty,dincx,dincy;
+        for(i=0;i<NV;i++){
+            if(Positions[i].x < minx){
+                minx = Positions[i].x;
+            }
+            if(Positions[i].y < miny){
+                miny = Positions[i].y;
+            }
+            if(Positions[i].z < minz){
+                minz = Positions[i].z;
+            }
+            if(Positions[i].x > maxx){
+                maxx = Positions[i].x;
+            }
+            if(Positions[i].y > maxy){
+                maxy = Positions[i].y;
+            }
+        }
+        distx = (maxx-minx)*5.0;
+        disty = (maxy-miny)*5.0;
+        dincx = distx/lenp;
+        dincy = disty/lenp;
+        for(i=0; i<lenp; i++){
+            for(j=0;j<lenp;j++){
+                surfacepos = glm::dvec3(((-distx/2)+(dincx*(double)i)),((-disty/2)+(dincy*(double)j)),minz);
+                surfacepos.x += com.x;
+                surfacepos.y += com.y;
+                surfacepositions.push_back(surfacepos);
+            }
+        }
+    }
+
+    void Cell::SurfaceStrech(double scale){
+        for (int i=0;i<(int)surfacepositions.size();i++){
+            surfacepositions[i].x *= scale;
+        }
     }
 
     double Cell::GetVolume(){
@@ -491,8 +603,5 @@ namespace DPM3D{
         glm::dvec3 temp = a-b;
         return glm::dot(temp,temp);
     }
-
-
-
 
 }

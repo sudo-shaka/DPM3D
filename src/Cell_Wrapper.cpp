@@ -16,12 +16,13 @@ void init_dvec3(py::module &m){
 
 void init_Cell(py::module &m){
     py::class_<DPM3D::Cell>(m, "Cell")
-    .def(py::init<double, double, double,double, int, double, double,double>(),
+    .def(py::init<double, double, double,double, int,double, double, double,double>(),
     py::arg("x1"),
     py::arg("y1"),
     py::arg("z1"),
     py::arg("calA0"),
     py::arg("VertexRecursion"),
+    py::arg("r0"),
     py::arg("Kv"),
     py::arg("Ka"),
     py::arg("Kb")
@@ -33,6 +34,7 @@ void init_Cell(py::module &m){
     .def_readwrite("Ka",&DPM3D::Cell::Ka)
     .def_readwrite("Kl",&DPM3D::Cell::Kl)
     .def_readwrite("Kv",&DPM3D::Cell::Kb)
+    .def_readonly("nSurfacePoints",&DPM3D::Cell::nsurfacep)
     .def_readwrite("Positions",&DPM3D::Cell::Positions)
     .def_readwrite("TriangleIndex",&DPM3D::Cell::FaceIndices)
     .def_readwrite("Velocities",&DPM3D::Cell::Velocities)
@@ -44,6 +46,11 @@ void init_Cell(py::module &m){
     .def("VertexFIRE",py::overload_cast<double, double, int, double>(&DPM3D::Cell::FIREMinimization),py::arg("alpha0"),py::arg("dt"),py::arg("itmax"),py::arg("Ftol"))
     .def("EulerUpdate",py::overload_cast<double>(&DPM3D::Cell::EulerUpdate),py::arg("dt"))
     .def("EulerUpdate",py::overload_cast<int,double>(&DPM3D::Cell::EulerUpdate),py::arg("nsteps"),py::arg("dt"))
+    .def("StickToSurface",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurface),py::arg("xpos"),py::arg("mindist"))
+    .def("StickToSurface",py::overload_cast<double>(&DPM3D::Cell::StickToSurface),py::arg("mindist"))
+    .def("SurfaceInit",&DPM3D::Cell::SetupSurface)
+    .def("RepelSurface",&DPM3D::Cell::RepelSurface)
+    .def("StretchSurface",py::overload_cast<double>(&DPM3D::Cell::SurfaceStrech),py::arg("scale"))
     .def("ExtendVertex",py::overload_cast<int,double>(&DPM3D::Cell::ExtendVertex),py::arg("vertexidx"),py::arg("Force"))
     .def("GetVolume",&DPM3D::Cell::GetVolume)
     .def("GetSA",&DPM3D::Cell::GetSurfaceArea)
