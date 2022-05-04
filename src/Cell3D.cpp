@@ -7,6 +7,8 @@
 #include <glm/vec3.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/gtx/norm.hpp>
+#include <thread>
+#include <future>
 
 namespace DPM3D{
     //constructors
@@ -360,6 +362,139 @@ namespace DPM3D{
             bendingStrain = (surfaceArea/flatArea) -1;
             Forces[i] += Kb*bendingStrain*(glm::normalize(center-Positions[i]));
         }
+    }
+
+
+    std::vector<glm::dvec3> Cell::GetShapeForces(DPM3D::Cell Cell){
+        std::vector<glm::dvec3> Forces,Fv,Fa,Fb;
+        Forces.resize(Cell.NV);
+        Fv.resize(Cell.NV);
+        Fa.resize(Cell.NV);
+        Fb.resize(Cell.NV);
+        auto v = std::async(DPM3D::Cell::GetVolumeForces,Cell); 
+        auto a = std::async(DPM3D::Cell::GetAreaForces,Cell);
+        auto b = std::async(DPM3D::Cell::GetBendingForces,Cell);
+        Fv = v.get();
+        Fa = a.get();
+        Fb = b.get();
+        for(int i=0;i<Cell.NV;i++){
+            Forces[i] = Fa[i]+Fb[i]+Fv[i];
+        }
+
+        return Forces;
+    }
+    std::vector<glm::dvec3> Cell::GetVolumeForces(DPM3D::Cell Cell){
+        double volume = Cell.GetVolume(),dist, nucdist = (0.5*pow((3*Cell.v0)/(4*M_PI),(1/3)));
+        double volumeStrain = (volume/Cell.v0) - 1.0;
+        glm::dvec3 center = Cell.GetCOM(),tmp;
+        std::vector<glm::dvec3> Forces;
+        Forces.resize(Cell.NV);
+        std::vector<int> tri{0,0,0};
+        int i,j;
+        for(i=0;i<Cell.ntriangles;i++){
+            tri = Cell.FaceIndices[i];
+            tmp = glm::cross((Cell.Positions[tri[1]]-center)- (Cell.Positions[tri[0]]-center),
+                (Cell.Positions[tri[2]]-center) - (Cell.Positions[tri[0]]-center));
+            tmp = glm::normalize(tmp);
+            for(j=0;j<3;j++){
+                dist = distance(center,Cell.Positions[tri[j]]);
+                if(nucdist < dist)
+                    Forces[tri[j]] -= Cell.Kv* 0.5 * volumeStrain * (tmp);
+                else
+                   Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Cell.Positions[tri[j]]);
+            }
+        }
+
+        return Forces;
+    }
+    std::vector<glm::dvec3> Cell::GetAreaForces(DPM3D::Cell Cell){
+        double length[3],dli[3],dlim1[3],l0 = sqrt((4*Cell.a0)/sqrt(3));
+        int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
+        std::vector<int> tri{0,0,0};
+        glm::dvec3 center(0.0,0.0,0.0);
+        std::vector<glm::dvec3> positions(3,center), lv(3,center), ulv(3,center),Forces(Cell.NV,center);
+        for(i=0;i<Cell.ntriangles;i++){
+            tri = Cell.FaceIndices[i];
+            for(j=0;j<3;j++){
+                positions[j] = Cell.Positions[tri[j]];
+            }
+            //center = (positions[0]+positions[1]+positions[2])/3.0;
+            for(j=0;j<3;j++){
+                lv[j] = positions[ip1[j]] - positions[j];
+                length[j] = distance(positions[ip1[j]],positions[j]);
+            }
+            for(j=0;j<3;j++){
+                ulv[j] = lv[j]/length[j];
+                dli[j] = length[j]/l0 - 1.0;
+                dlim1[j] = (length[im1[j]]/l0) - 1.0;
+            }
+            for(j=0;j<3;j++){
+                Forces[tri[j]] += (Cell.Ka*(sqrt(Cell.a0)/l0)) * (dli[j]*ulv[j]-dlim1[j]*ulv[im1[j]]);
+            }
+        }
+        return Forces;
+    }
+    std::vector<glm::dvec3> Cell::GetBendingForces(DPM3D::Cell Cell){
+        int i, j,k,t,c;
+        std::vector<std::vector<int>> corner;
+        std::vector<int> tri{0,0,0},UsedIndexes,usedPositions;
+        std::vector<glm::dvec3> Forces; Forces.resize(Cell.NV);
+        glm::dvec3 center;
+        double surfaceArea, flatArea,l1,l2,l3,s,bendingStrain;
+        for(i=0;i<Cell.NV;i++){
+            c = 0;
+            corner.clear();
+            UsedIndexes.clear();
+            for(j=0;j<Cell.ntriangles;j++){
+                tri = Cell.FaceIndices[j];
+                for(t=0;t<3;t++){
+                    if(tri[t] == i){
+                        corner.push_back(tri);
+                        UsedIndexes.push_back(j);
+                        c++;
+                        break;
+                    }
+                }
+            }
+            surfaceArea = 0.0;
+            center *= 0.0;
+            usedPositions.clear();
+
+            for(j=0;j<c;j++){
+                surfaceArea += Cell.GetArea(UsedIndexes[j]);
+                for(t=0;t<3;t++){
+                    usedPositions.push_back(corner[j][t]);
+                }
+            }
+            sort( usedPositions.begin(), usedPositions.end() );
+            usedPositions.erase( unique( usedPositions.begin(), usedPositions.end() ), usedPositions.end() );
+            usedPositions.erase(std::remove(usedPositions.begin(), usedPositions.end(), i), usedPositions.end());
+            usedPositions.shrink_to_fit();
+            k = (int)usedPositions.size();
+            for(j=0;j<k;j++){
+                center += Cell.Positions[usedPositions[j]];
+            }
+            center /= k;
+            flatArea = 0.0;
+
+            for(j=0;j<k;j++){
+                if(j != k-1){
+                    l1 = distance(center,Cell.Positions[usedPositions[j]]);
+                    l2 = distance(center,Cell.Positions[usedPositions[j+1]]);
+                    l3 = distance(Cell.Positions[usedPositions[j]],Cell.Positions[usedPositions[j+1]]);
+                }
+                else{
+                    l1 = distance(center,Cell.Positions[usedPositions[j]]);
+                    l2 = distance(center,Cell.Positions[usedPositions[0]]);
+                    l3 = distance(Cell.Positions[usedPositions[j]],Cell.Positions[usedPositions[0]]);
+                }
+                s = (l1+l2+l3)/2;
+                flatArea += sqrt(s*(s-l1)*(s-l2)*(s-l3));
+            }
+            bendingStrain = (surfaceArea/flatArea) -1;
+            Forces[i] += Cell.Kb*bendingStrain*(glm::normalize(center-Cell.Positions[i]));
+        }
+        return Forces;
     }
 
     void Cell::StickToSurface(double z, double mindist){
