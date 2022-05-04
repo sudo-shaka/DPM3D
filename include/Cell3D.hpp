@@ -52,8 +52,12 @@ namespace DPM3D {
             double GetSurfaceArea();
             double GetCalA0();
             glm::dvec3 GetCOM();
-
+            static std::vector<glm::dvec3> GetShapeForces(DPM3D::Cell Cell);
+            static std::vector<glm::dvec3> GetVolumeForces(DPM3D::Cell Cell);
+            static std::vector<glm::dvec3> GetAreaForces(DPM3D::Cell Cell);
+            static std::vector<glm::dvec3> GetBendingForces(DPM3D::Cell Cell);
     };
+
     glm::dvec3 GetMiddlePoint(glm::dvec3 a, glm::dvec3 b);
     std::vector<int> newFace(int a, int b, int c);
     double urandom();
