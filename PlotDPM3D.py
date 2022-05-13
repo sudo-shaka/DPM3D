@@ -14,7 +14,7 @@ def plotcell(Cell):
     #plt.show()
 
 def plottissue(Tissue):
-    fig = plt.figure()
+    fig = plt.figure(figsize=(15,15))
     ax = fig.add_subplot(projection='3d')
     for ci in range(Tissue.NCELLS):
         Cell = Tissue.Cells[ci];
@@ -23,5 +23,10 @@ def plottissue(Tissue):
             y = [Cell.Positions[i].y for i in tri];
             z = [Cell.Positions[i].z for i in tri];
             ax.plot(x,y,z,color='black');
+            ax.set_xlim(0,Tissue.L);
+            ax.set_ylim(0,Tissue.L);
+            ax.set_zlim(0,Tissue.L);
             F = [abs(Cell.Forces[i].x) + abs(Cell.Forces[i].y) + abs(Cell.Forces[i].z) for i in tri];
             ax.scatter(x,y,z,c=F,cmap='coolwarm')
+            ax.grid(False)
+            ax.axis('off')
