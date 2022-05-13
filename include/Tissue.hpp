@@ -11,9 +11,12 @@ namespace DPM3D{
         double Kc;
         double U;
         std::vector<DPM3D::Cell> Cells;
+        std::vector<bool> overlaps;
 
         Tissue(std::vector<DPM3D::Cell> Cells, double phi0);
 
-        void InteractingForceUpdate();
+        void RetractingForceUpdate();
+        void EulerUpdate(int nsteps, double dt);
+        void FindOverlaps(int ci, int cj);
     };
 }

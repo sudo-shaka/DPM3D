@@ -7,6 +7,7 @@ namespace DPM3D {
             int NV;
             double calA0;
             double v0;
+            double r0;
             double a0;
             double s0;
             double U;
@@ -51,6 +52,7 @@ namespace DPM3D {
             double GetArea(int triidx);
             double GetSurfaceArea();
             double GetCalA0();
+            bool pointInside(glm::dvec3);
             glm::dvec3 GetCOM();
             static std::vector<glm::dvec3> GetShapeForces(DPM3D::Cell Cell);
             static std::vector<glm::dvec3> GetVolumeForces(DPM3D::Cell Cell);
