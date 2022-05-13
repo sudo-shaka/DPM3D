@@ -12,8 +12,9 @@
 
 namespace DPM3D{
     //constructors
-    Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double r0 ,double _Kv, double _Ka, double _Kb){
+    Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _r0 ,double _Kv, double _Ka, double _Kb){
         calA0 = _calA0;
+        r0 = _r0;
         Kv = _Kv;
         Ka = _Ka;
         Kb = _Kb;
@@ -674,6 +675,38 @@ namespace DPM3D{
         }
         compos /= NV;
         return compos;
+    }
+
+    bool Cell::pointInside(glm::dvec3 point){
+        std::vector<int> tri;
+        double det, inv_det,u,v;
+        glm::dvec3 dir,edge1,edge2,tvec,pvec,qvec;
+        int n_crosses = 0;
+        dir = glm::normalize(glm::dvec3(1,1,1));
+        for(int i=0;i<ntriangles;i++){
+            tri = FaceIndices[i];
+            edge1 = Positions[tri[1]] - Positions[tri[0]];
+            edge2 = Positions[tri[2]] - Positions[tri[0]];
+            pvec = glm::cross(dir,edge2);
+            det = glm::dot(edge1,pvec);
+            /*if(det<ep && det > -ep){
+                continue;
+            }*/
+            inv_det = 1.0/det;
+            tvec = point - Positions[tri[0]];
+            u = glm::dot(tvec,pvec);
+            if(u<0 || u > 1.0 || u*inv_det <0 || u*inv_det > 1.0){
+                continue;
+            }
+            qvec = glm::cross(tvec,edge1);
+            v = glm::dot(dir,qvec);
+            if(v < 0.0 || u+v > 1.0 || v*inv_det < 0.0 || (u*inv_det)+(v*inv_det) >1.0)
+            {
+                continue;
+            }
+            n_crosses++;
+        }
+        return (n_crosses % 2 != 0);
     }
 
     //The following functions are for construction and vector maniplulations

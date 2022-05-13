@@ -10,10 +10,14 @@ void init_Tissue(py::module &m){
     py::arg("Cells"),
     py::arg("phi0")
     )
+    .def_readwrite("L",&DPM3D::Tissue::L)
     .def_readonly("phi0",&DPM3D::Tissue::phi0)
     .def_readwrite("Kc",&DPM3D::Tissue::Kc)
     .def_readonly("NCELLS",&DPM3D::Tissue::NCELLS)
     .def_readonly("Cells",&DPM3D::Tissue::Cells)
-    .def("InteractingForceUpdate",&DPM3D::Tissue::InteractingForceUpdate)
+    .def_readonly("overlaps",&DPM3D::Tissue::overlaps)
+    .def("InteractingForceUpdate",&DPM3D::Tissue::RetractingForceUpdate)
+    .def("EulerUpdate",&DPM3D::Tissue::EulerUpdate)
+    .def("FindOverlaps",&DPM3D::Tissue::FindOverlaps)
     ;
 }

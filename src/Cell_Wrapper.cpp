@@ -58,5 +58,6 @@ void init_Cell(py::module &m){
     .def("GetVolume",&DPM3D::Cell::GetVolume)
     .def("GetSA",&DPM3D::Cell::GetSurfaceArea)
     .def("GetCalA0",&DPM3D::Cell::GetCalA0)
+    .def("PointInside",&DPM3D::Cell::pointInside)
     ;
 }
