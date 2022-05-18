@@ -30,20 +30,16 @@ namespace DPM3D{
                 if(i!=j){
                     FindOverlaps(i,j);
                     for(vi=0;vi<Cells[i].NV;vi++){
-                        dx = Cells[i].Positions[vi].x-comi.x;
-                        dy = Cells[i].Positions[vi].y-comi.y;
-                        dz = Cells[i].Positions[vi].z-comi.z;
-                        dx -= L*round(dx/L);
-                        dy -= L*round(dy/L);
-                        dz -= L*round(dz/L);
                         dist = sqrt(dx*dx + dy*dy + dz*dz);
                         if(overlaps[vi]){
+                            dx = Cells[i].Positions[vi].x-comi.x;
+                            dy = Cells[i].Positions[vi].y-comi.y;
+                            dz = Cells[i].Positions[vi].z-comi.z;
+                            dx -= L*round(dx/L);
+                            dy -= L*round(dy/L);
+                            dz -= L*round(dz/L);
                             ftmp = Kc*(1-dist)/Cells[i].r0;
                             Cells[i].Forces[vi] -= ftmp * glm::normalize(comi - Cells[i].Positions[vi]);
-                        }
-                        else if(dist < 1.0){
-                            ftmp = Kc*(1-dist)/Cells[i].r0;
-                            Cells[i].Forces[vi] += ftmp * glm::normalize(comj - Cells[i].Positions[vi]);
                         }
                     }
                 }
