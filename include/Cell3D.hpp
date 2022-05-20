@@ -15,6 +15,7 @@ namespace DPM3D {
             double Ka;
             double Kl;
             double Kb;
+            double Ks;
             int ntriangles;
             std::vector<std::vector<int>> midpointCache;
             std::vector<glm::dvec3> Positions;
@@ -38,8 +39,13 @@ namespace DPM3D {
             void VolumeForceUpdate();
             void AreaForceUpdate();
             void BendingForceUpdate();
+            void SurfaceGradient(double x, double mindist);
             void StickToSurface(double x, double mindist);
             void StickToSurface(double mindist);
+            void StickToSurfaceCatch(double mindist);
+            void StickToSurfaceCatch(double z, double mindist);
+            void StickToSurfaceSlip(double mindist);
+            void StickToSurfaceSlip(double z, double mindist);
             void SetupSurface(int n);
             void RepelSurface();
             void SurfaceStrech(double scale);
