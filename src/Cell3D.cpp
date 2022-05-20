@@ -18,6 +18,7 @@ namespace DPM3D{
         Kv = _Kv;
         Ka = _Ka;
         Kb = _Kb;
+        Ks = 1.0;
         int i,j,steps,a,b,c;
         double t = (1+sqrt(5)) / 2;
         Positions.resize(12);
@@ -104,6 +105,8 @@ namespace DPM3D{
             Positions[i].y += _y;
             Positions[i].z += _z;
         }
+        midpointCache.clear();
+        midpointCache.shrink_to_fit();
     }
 
     void Cell::ResetForces(){
@@ -372,7 +375,7 @@ namespace DPM3D{
         Fv.resize(Cell.NV);
         Fa.resize(Cell.NV);
         Fb.resize(Cell.NV);
-        auto v = std::async(DPM3D::Cell::GetVolumeForces,Cell); 
+        auto v = std::async(DPM3D::Cell::GetVolumeForces,Cell);
         auto a = std::async(DPM3D::Cell::GetAreaForces,Cell);
         auto b = std::async(DPM3D::Cell::GetBendingForces,Cell);
         Fv = v.get();
@@ -498,6 +501,34 @@ namespace DPM3D{
         return Forces;
     }
 
+    void Cell::SurfaceGradient(double z, double mindist){
+        glm::dvec3 surfacepos, A,B, com = GetCOM();
+        double dist, ftmp;
+        std::vector<int> tri{0,0,0};
+        for(int i=0;i<ntriangles;i++){
+            tri = FaceIndices[i];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(int j=0; j<3;j++){
+                surfacepos = Positions[tri[j]];
+                surfacepos.z = z;
+                dist = distance(surfacepos,Positions[tri[j]]);
+                if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
+                    ftmp = (1.0 - dist/(mindist))/mindist;
+                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    ExtendVertex(tri[j],a0);
+                    if(Positions[tri[j]].x < com.x){
+                      Forces[tri[j]] *= 0.6;
+                    }
+                    Forces[tri[j]] *= Ks;
+                }
+                if(Positions[tri[j]].z < z){
+                    Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
+                }
+            }
+        }
+    }
+
     void Cell::StickToSurface(double z, double mindist){
         glm::dvec3 surfacepos,A,B,com = GetCOM();
         double dist,ftmp;
@@ -513,7 +544,7 @@ namespace DPM3D{
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/mindist;
-                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
                     ExtendVertex(tri[j],a0);
                 }
                 if(Positions[tri[j]].z < z){
@@ -548,11 +579,124 @@ namespace DPM3D{
                     Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
                 }
                 else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
-                    ftmp = (1.0 - dist/(mindist))/mindist;
-                    ftmp *= (M_PI/2)-angle;
-                    //Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest]- Positions[tri[vi]]));
+                    ftmp = Ks*(1.0 - dist/(mindist))/mindist;
+                    //ftmp *= (M_PI/2)-angle; //based on angle
                     Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
-                    //Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(Positions[tri[vi]] - com));
+                }
+            }
+        }
+    }
+
+
+    void Cell::StickToSurfaceSlip(double z, double mindist){
+        glm::dvec3 surfacepos,A,B,com = GetCOM();
+        double dist,ftmp;
+        std::vector<int> tri{0,0,0};
+
+        for(int i=0;i<ntriangles;i++){
+            tri = FaceIndices[i];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(int j=0; j<3;j++){
+                surfacepos = Positions[tri[j]];
+                surfacepos.z = z;
+                dist = distance(surfacepos,Positions[tri[j]]);
+                if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
+                    ftmp = (1.0 - dist/(mindist))/dist;
+                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    //ExtendVertex(tri[j],a0);
+                }
+                if(Positions[tri[j]].z < z){
+                    Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
+                }
+            }
+        }
+    }
+
+    void Cell::StickToSurfaceSlip(double mindist){
+        glm::dvec3 A,B,com = GetCOM();
+        double dist,ftmp,disttmp;
+        std::vector<int> tri{0,0,0};
+        int ti,vi,si,siclosest,angle;
+
+        for(ti=0;ti<ntriangles;ti++){
+            tri = FaceIndices[ti];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(vi=0;vi<3;vi++){
+                dist = distance(surfacepositions[0],Positions[tri[vi]]);
+                siclosest = 0;
+                for(si=0;si<nsurfacep;si++){
+                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
+                    if(disttmp < dist){
+                        dist = disttmp;
+                        siclosest = si;
+                    }
+                }
+                angle = acos(glm::dot(Positions[tri[vi]],com)/(glm::l2Norm(Positions[tri[vi]])*glm::l2Norm(com)));
+                if(Positions[tri[vi]].z < surfacepositions[0].z){
+                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
+                }
+                else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
+                    ftmp = Ks*(1.0 - dist/(mindist))/dist; //slip bond
+                    Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
+                }
+            }
+        }
+    }
+
+    void Cell::StickToSurfaceCatch(double z, double mindist){
+        glm::dvec3 surfacepos,A,B,com = GetCOM();
+        double dist,ftmp;
+        std::vector<int> tri{0,0,0};
+
+        for(int i=0;i<ntriangles;i++){
+            tri = FaceIndices[i];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(int j=0; j<3;j++){
+                surfacepos = Positions[tri[j]];
+                surfacepos.z = z;
+                dist = distance(surfacepos,Positions[tri[j]]);
+                if((A.x*B.y - A.y*B.x)< 0.0){
+                    ftmp = exp(-dist/mindist)*sin(mindist*(dist/mindist));
+                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    //ExtendVertex(tri[j],a0);
+                }
+                if(Positions[tri[j]].z < z){
+                    Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
+                }
+            }
+        }
+    }
+
+    void Cell::StickToSurfaceCatch(double mindist){
+                glm::dvec3 A,B,com = GetCOM();
+        double dist,ftmp,disttmp;
+        std::vector<int> tri{0,0,0};
+        int ti,vi,si,siclosest,angle;
+
+        for(ti=0;ti<ntriangles;ti++){
+            tri = FaceIndices[ti];
+            A = Positions[tri[1]] - Positions[tri[0]];
+            B = Positions[tri[2]] - Positions[tri[0]];
+            for(vi=0;vi<3;vi++){
+                dist = distance(surfacepositions[0],Positions[tri[vi]]);
+                siclosest = 0;
+                for(si=0;si<nsurfacep;si++){
+                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
+                    if(disttmp < dist){
+                        dist = disttmp;
+                        siclosest = si;
+                    }
+                }
+                angle = acos(glm::dot(Positions[tri[vi]],com)/(glm::l2Norm(Positions[tri[vi]])*glm::l2Norm(com)));
+                if(Positions[tri[vi]].z < surfacepositions[0].z){
+                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
+                }
+                else if((A.x*B.y - A.y*B.x)< 0.0){
+                    ftmp = Ks*exp(-dist/mindist)*sin(mindist*(dist/mindist)); //catch bond
+                    Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
                 }
             }
         }
@@ -613,7 +757,7 @@ namespace DPM3D{
 
     void Cell::SurfaceStrech(double scale){
         for (int i=0;i<(int)surfacepositions.size();i++){
-            surfacepositions[i].x *= scale;
+            surfacepositions[i].x *= 1+scale;
         }
     }
 
