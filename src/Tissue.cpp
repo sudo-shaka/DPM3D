@@ -19,6 +19,147 @@ namespace DPM3D{
         L = pow(volume,(1/3))/phi0;
     }
 
+    void Tissue::MonolayerDisperse(){
+        double sumarea = 0.0;
+        std::vector<double> X,Y,Fx,Fy;
+        X.resize(NCELLS); Y.resize(NCELLS);
+        Fx.resize(NCELLS); Fy.resize(NCELLS);
+        double ri,rj,yi,yj,xi,xj,dx,dy,dist;
+        double ux,uy,ftmp,fx,fy;
+        int  i,j,count;
+        for(i=0;i<NCELLS;i++){
+            sumarea += M_PI*(Cells[i].r0*Cells[i].r0);
+        }
+        L = sqrt(sumarea)/phi0;
+        for(i=0;i<NCELLS;i++){
+            X[i] = drand48() * L;
+            Y[i] = drand48() * L;
+        }
+        double oldU = 100, dU = 100;
+        while(dU < 1e-6){
+            U = 0;
+            for(i=0;i<NCELLS;i++){
+                Fx[i] = 0.0;
+                Fy[i] = 0.0;
+            }
+
+            for(i=0;i<NCELLS;i++){
+                xi = X[i];
+                yi = Y[i];
+                ri = Cells[i].r0;
+                for(j=0;j<NCELLS;j++){
+                    if(j != i){
+                        xj = X[j];
+                        yj = Y[j];
+                        rj = Cells[j].r0;
+                        dx = xj-xi;
+                        dx -= L*round(dx/L);
+                        dy = yj-yi;
+                        dy -= L*round(dy/L);
+                        dist = sqrt(dx*dx + dy*dy);
+                        if(dist < 0.0)
+                            dist *= -1;
+                        if(dist <= (ri+rj)){
+                            ux = dx/dist;
+                            uy = dy/dist;
+                            ftmp = (1.0-dist/(ri+rj))/(ri+rj);
+                            fx = ftmp*ux;
+                            fy = ftmp*uy;
+                            Fx[i] -= fx;
+                            Fy[i] -= fy;
+                            Fy[j] += fy;
+                            Fx[j] += fx;
+                            U += 0.5*(1-(dist/(ri+rj))*(1-dist/(ri+rj)));
+                        }
+                    }
+                }
+            }
+            for(int i=0; i<NCELLS;i++){
+                X[i] += 0.01*Fx[i];
+                Y[i] += 0.01*Fy[i];
+            }
+            dU = U-oldU;
+            if(dU < 0.0)
+                dU *= -1;
+            oldU = U;
+            count++;
+            if(count > 1e5){
+                break;
+            }
+        }
+        glm::dvec3 com; 
+        for(i=0; i<NCELLS; i++){
+            com = Cells[i].GetCOM();
+            for(j=0;j<Cells[i].NV;j++){
+                Cells[i].Positions[j] -= com;
+                Cells[i].Positions[j].x += X[j];
+                Cells[i].Positions[j].y += Y[j]; 
+            }
+        }
+    }
+
+    void Tissue::TissueDisperse(){
+        std::vector<glm::dvec3> centers;
+        std::vector<glm::dvec3> forces;
+        glm::dvec3 rij;
+        centers.resize(NCELLS);
+        forces.resize(NCELLS);
+        int  i,j,count;
+        double ftmp;
+        for(i=0;i<NCELLS;i++){
+            centers[i].x = drand48() * L;
+            centers[i].y = drand48() * L;
+            centers[i].z = drand48() * L;
+        }
+        double oldU = 100, dU = 100, U, dist;
+        while(dU < 1e-6){
+            U = 0;
+            for(i=0;i<NCELLS;i++){
+                forces[i] = {0,0,0};
+            }
+            for(i=0;i<NCELLS;i++){
+                for(j=0;j<NCELLS;j++){
+                    if(j!=i){
+                        rij = centers[j] - centers[i];
+                        rij.x *= L*round(centers[i].x/L);
+                        rij.y *= L*round(centers[i].y/L);
+                        rij.z *= L*round(centers[i].z/L);
+                        dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
+                        if(dist < 0.0){
+                            dist *=-1;
+                        }
+                        if(dist <= (Cells[i].r0 + Cells[j].r0)){
+                            ftmp = (1-dist/(Cells[i].r0+Cells[j].r0)/(Cells[i].r0+Cells[j].r0));
+                            forces[i] -= ftmp*(rij/dist);
+                            forces[j] += ftmp*(rij/dist);
+                        }
+                    }
+                }
+            }
+            for(i=0;i<NCELLS;i++){
+                centers[i] += 0.01*forces[i];
+            }
+            dU = U-oldU;
+            if(dU < 0.0){
+                dU *= -1;
+            }
+            oldU = U;
+            count++;
+            if(count > 1e5){
+                break;
+            }
+        }
+        glm::dvec3 com;
+        for(i=0;i<NCELLS;i++){
+            com = Cells[i].GetCOM();
+            for(j=0;j<Cells[i].NV;j++){
+                Cells[i].Positions[j] -= com;
+                Cells[i].Positions[j] += centers[i];
+            }
+
+        }
+    }
+
     void Tissue::RetractingForceUpdate(){
         int i,j,vi;//vj;
         glm::dvec3 comi, comj;
@@ -30,13 +171,6 @@ namespace DPM3D{
                 if(i!=j){
                     FindOverlaps(i,j);
                     for(vi=0;vi<Cells[i].NV;vi++){
-                        /*dx = Cells[i].Positions[vi].x-comi.x;
-                        dy = Cells[i].Positions[vi].y-comi.y;
-                        dz = Cells[i].Positions[vi].z-comi.z;
-                        dx -= L*round(dx/L);
-                        dy -= L*round(dy/L);
-                        dz -= L*round(dz/L);
-                        dist = sqrt(dx*dx + dy*dy + dz*dz);*/
                         if(overlaps[vi]){
                             dx = Cells[i].Positions[vi].x-comi.x;
                             dy = Cells[i].Positions[vi].y-comi.y;
@@ -48,10 +182,6 @@ namespace DPM3D{
                             ftmp = Kc*(1-dist)/Cells[i].r0;
                             Cells[i].Forces[vi] -= ftmp * glm::normalize(comi - Cells[i].Positions[vi]);
                         }
-                        /*else if(dist < 1.0){
-                            ftmp = Kc*(1-dist)/Cells[i].r0;
-                            Cells[i].Forces[vi] += ftmp * glm::normalize(comj - Cells[i].Positions[vi]);
-                        }*/
                     }
                 }
             }
@@ -75,20 +205,13 @@ namespace DPM3D{
 
     void Tissue::FindOverlaps(int ci, int cj){
         int vi;
-        //double dx,dy,dz;
-        //glm::dvec3 point, com = Cells[cj].GetCOM();
+        glm::dvec3 point, com = Cells[cj].GetCOM();
         overlaps.resize(Cells[ci].NV);
         for(vi = 0; vi < Cells[ci].NV; vi++){
-            /*dx = Cells[i].Positions[vi].x - com.x;
-            dy = Cells[i].Positions[vi].y - com.y;
-            dz = Cells[i].Positions[vi].y - com.y;
-            dx = L*round(dx/L);
-            dy = L*round(dy/L);
-            dz = L*round(dz/L);
-            point.x = dx;
-            point.y = dy;
-            point.z = dz;*/
-            overlaps[vi] = Cells[cj].pointInside(Cells[ci].Positions[vi]);
+            point = Cells[ci].Positions[vi];
+            point -= L * round(point/L);
+            point += L * round(com/L);
+            overlaps[vi] = Cells[cj].pointInside(point);
         }
     }
 

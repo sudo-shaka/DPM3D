@@ -833,9 +833,6 @@ namespace DPM3D{
             edge2 = Positions[tri[2]] - Positions[tri[0]];
             pvec = glm::cross(dir,edge2);
             det = glm::dot(edge1,pvec);
-            /*if(det<ep && det > -ep){
-                continue;
-            }*/
             inv_det = 1.0/det;
             tvec = point - Positions[tri[0]];
             u = glm::dot(tvec,pvec);
