@@ -18,5 +18,7 @@ namespace DPM3D{
         void RetractingForceUpdate();
         void EulerUpdate(int nsteps, double dt);
         void FindOverlaps(int ci, int cj);
+        void MonolayerDisperse();
+        void TissueDisperse();
     };
 }
