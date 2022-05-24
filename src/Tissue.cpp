@@ -14,9 +14,9 @@ namespace DPM3D{
         NCELLS = Cells.size();
         double volume = 0.0;
         for(int i=0; i<NCELLS;i++){
-            volume+=Cells[i].v0;
+            volume+=(4/3)*M_PI*pow(Cells[i].r0,3);
         }
-        L = pow(volume,(1/3))/phi0;
+        L = cbrt(volume)/phi0;
     }
 
     void Tissue::MonolayerDisperse(){
@@ -28,15 +28,12 @@ namespace DPM3D{
         double ux,uy,ftmp,fx,fy;
         int  i,j,count;
         for(i=0;i<NCELLS;i++){
-            sumarea += M_PI*(Cells[i].r0*Cells[i].r0);
-        }
-        L = sqrt(sumarea)/phi0;
-        for(i=0;i<NCELLS;i++){
             X[i] = drand48() * L;
             Y[i] = drand48() * L;
         }
         double oldU = 100, dU = 100;
-        while(dU < 1e-6){
+        count = 0;
+        while(dU > 1e-6){
             U = 0;
             for(i=0;i<NCELLS;i++){
                 Fx[i] = 0.0;
@@ -75,8 +72,8 @@ namespace DPM3D{
                 }
             }
             for(int i=0; i<NCELLS;i++){
-                X[i] += 0.01*Fx[i];
-                Y[i] += 0.01*Fy[i];
+                X[i] += 0.001*Fx[i];
+                Y[i] += 0.001*Fy[i];
             }
             dU = U-oldU;
             if(dU < 0.0)
@@ -84,16 +81,18 @@ namespace DPM3D{
             oldU = U;
             count++;
             if(count > 1e5){
+                std::cerr << "Warning: Max timesteps for dispersion reached"  << std::endl;
                 break;
             }
         }
-        glm::dvec3 com; 
+        glm::dvec3 com;
         for(i=0; i<NCELLS; i++){
             com = Cells[i].GetCOM();
             for(j=0;j<Cells[i].NV;j++){
-                Cells[i].Positions[j] -= com;
+                Cells[i].Positions[j].x -= com.x;
+                Cells[i].Positions[j].y -= com.y;
                 Cells[i].Positions[j].x += X[j];
-                Cells[i].Positions[j].y += Y[j]; 
+                Cells[i].Positions[j].y += Y[j];
             }
         }
     }
@@ -104,7 +103,7 @@ namespace DPM3D{
         glm::dvec3 rij;
         centers.resize(NCELLS);
         forces.resize(NCELLS);
-        int  i,j,count;
+        int  i,j,count=0;
         double ftmp;
         for(i=0;i<NCELLS;i++){
             centers[i].x = drand48() * L;
@@ -112,7 +111,7 @@ namespace DPM3D{
             centers[i].z = drand48() * L;
         }
         double oldU = 100, dU = 100, U, dist;
-        while(dU < 1e-6){
+        while(dU > 1e-6){
             U = 0;
             for(i=0;i<NCELLS;i++){
                 forces[i] = {0,0,0};
@@ -121,23 +120,22 @@ namespace DPM3D{
                 for(j=0;j<NCELLS;j++){
                     if(j!=i){
                         rij = centers[j] - centers[i];
-                        rij.x *= L*round(centers[i].x/L);
-                        rij.y *= L*round(centers[i].y/L);
-                        rij.z *= L*round(centers[i].z/L);
+                        rij *= L*round(rij/L);
                         dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
                         if(dist < 0.0){
                             dist *=-1;
                         }
-                        if(dist <= (Cells[i].r0 + Cells[j].r0)){
+                        if(dist < (Cells[i].r0 + Cells[j].r0)){
                             ftmp = (1-dist/(Cells[i].r0+Cells[j].r0)/(Cells[i].r0+Cells[j].r0));
                             forces[i] -= ftmp*(rij/dist);
                             forces[j] += ftmp*(rij/dist);
+                            U += 0.5*(1-(dist/(Cells[i].r0+Cells[j].r0))*(1-dist/(Cells[i].r0+Cells[j].r0)));
                         }
                     }
                 }
             }
             for(i=0;i<NCELLS;i++){
-                centers[i] += 0.01*forces[i];
+                centers[i] += 0.001*forces[i];
             }
             dU = U-oldU;
             if(dU < 0.0){
@@ -146,6 +144,7 @@ namespace DPM3D{
             oldU = U;
             count++;
             if(count > 1e5){
+                std::cerr << "Warning: Max timesteps for dispersion reached"  << std::endl;
                 break;
             }
         }
@@ -156,7 +155,6 @@ namespace DPM3D{
                 Cells[i].Positions[j] -= com;
                 Cells[i].Positions[j] += centers[i];
             }
-
         }
     }
 
