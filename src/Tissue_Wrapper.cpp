@@ -19,5 +19,7 @@ void init_Tissue(py::module &m){
     .def("InteractingForceUpdate",&DPM3D::Tissue::RetractingForceUpdate)
     .def("EulerUpdate",&DPM3D::Tissue::EulerUpdate)
     .def("FindOverlaps",&DPM3D::Tissue::FindOverlaps)
+    .def("MonolayerDisperse",&DPM3D::Tissue::MonolayerDisperse)
+    .def("TissueDisperse",&DPM3D::Tissue::TissueDisperse)
     ;
 }
