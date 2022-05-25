@@ -120,7 +120,7 @@ namespace DPM3D{
                 for(j=0;j<NCELLS;j++){
                     if(j!=i){
                         rij = centers[j] - centers[i];
-                        rij *= L*round(rij/L);
+                        rij -= L*round(rij/L);
                         dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
                         if(dist < 0.0){
                             dist *=-1;
