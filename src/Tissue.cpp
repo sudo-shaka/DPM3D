@@ -72,8 +72,8 @@ namespace DPM3D{
                 }
             }
             for(int i=0; i<NCELLS;i++){
-                X[i] += 0.001*Fx[i];
-                Y[i] += 0.001*Fy[i];
+                X[i] += 0.01*Fx[i];
+                Y[i] += 0.01*Fy[i];
             }
             dU = U-oldU;
             if(dU < 0.0)
@@ -91,8 +91,8 @@ namespace DPM3D{
             for(j=0;j<Cells[i].NV;j++){
                 Cells[i].Positions[j].x -= com.x;
                 Cells[i].Positions[j].y -= com.y;
-                Cells[i].Positions[j].x += X[j];
-                Cells[i].Positions[j].y += Y[j];
+                Cells[i].Positions[j].x += X[i];
+                Cells[i].Positions[j].y += Y[i];
             }
         }
     }
@@ -127,15 +127,15 @@ namespace DPM3D{
                         }
                         if(dist < (Cells[i].r0 + Cells[j].r0)){
                             ftmp = (1-dist/(Cells[i].r0+Cells[j].r0)/(Cells[i].r0+Cells[j].r0));
-                            forces[i] -= ftmp*(rij/dist);
-                            forces[j] += ftmp*(rij/dist);
+                            forces[i] -= ftmp*glm::normalize(rij);
+                            forces[j] += ftmp*glm::normalize(rij);
                             U += 0.5*(1-(dist/(Cells[i].r0+Cells[j].r0))*(1-dist/(Cells[i].r0+Cells[j].r0)));
                         }
                     }
                 }
             }
             for(i=0;i<NCELLS;i++){
-                centers[i] += 0.001*forces[i];
+                centers[i] += 0.01*forces[i];
             }
             dU = U-oldU;
             if(dU < 0.0){
