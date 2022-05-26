@@ -25,7 +25,6 @@ namespace DPM3D {
             std::vector<glm::dvec3> surfacepositions;
             int  nsurfacep;
 
-
             Cell(double x1,double y1, double z1,
                 double calA0,int f,double r0,
                 double Kv, double Ka,double Kb);
