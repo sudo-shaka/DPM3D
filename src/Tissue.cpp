@@ -169,15 +169,14 @@ namespace DPM3D{
     }
 
     void Tissue::CellRetractingUpdate(int ci){
-        glm::dvec3 comi = Cells[ci].GetCOM(),comj, rij;
+        glm::dvec3 com = Cells[ci].GetCOM();
         int vi;
         for(int j=0;j<NCELLS;j++){
             if(ci != j){
-                comj = Cells[j].GetCOM();
                 FindOverlaps(ci,j);
                 for(vi=0; vi<Cells[ci].NV;vi++){
                     if(overlaps[vi]){
-                        Cells[ci].Forces[vi] += Kc * glm::normalize(rij);
+                        Cells[ci].Forces[vi] += Kc * glm::normalize(Cells[ci].Positions[vi] - com);
                     }
                 }
             }
