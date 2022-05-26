@@ -158,27 +158,31 @@ namespace DPM3D{
     }
 
     void Tissue::RetractingForceUpdate(){
-        int i,j,vi;//vj;
-        glm::dvec3 comi, comj;
-        double dx,dy,dz,dist,ftmp;
+        std::vector<std::thread> threads;
+        int i;
         for(i=0;i<NCELLS;i++){
-            comi = Cells[i].GetCOM();
-            for(j=0;j<NCELLS;j++){
+            threads.push_back(std::thread(&DPM3D::Tissue::CellRetractingUpdate,this,i));
+        }
+        for(i=0;i<NCELLS;i++){
+            threads[i].join();
+        }
+    }
+
+    void Tissue::CellRetractingUpdate(int ci){
+        glm::dvec3 comi = Cells[ci].GetCOM(),comj, rij;
+        double dist,ftmp;
+        int vi;
+        for(int j=0;j<NCELLS;j++){
+            if(ci != j){
                 comj = Cells[j].GetCOM();
-                if(i!=j){
-                    FindOverlaps(i,j);
-                    for(vi=0;vi<Cells[i].NV;vi++){
-                        if(overlaps[vi]){
-                            dx = Cells[i].Positions[vi].x-comi.x;
-                            dy = Cells[i].Positions[vi].y-comi.y;
-                            dz = Cells[i].Positions[vi].z-comi.z;
-                            dx -= L*round(dx/L);
-                            dy -= L*round(dy/L);
-                            dz -= L*round(dz/L);
-                            dist = sqrt(dx*dx + dy*dy + dz*dz);
-                            ftmp = Kc*(1-dist)/Cells[i].r0;
-                            Cells[i].Forces[vi] -= ftmp * glm::normalize(comi - Cells[i].Positions[vi]);
-                        }
+                FindOverlaps(ci,j);
+                for(vi=0; vi<Cells[ci].NV;vi++){
+                    if(overlaps[vi]){
+                        rij = Cells[ci].Positions[vi] - comi;
+                        rij -= L*round(rij/L);
+                        dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
+                        ftmp = Kc*(1-dist)/Cells[ci].r0;
+                        Cells[ci].Forces[vi] -= ftmp * glm::normalize(rij);
                     }
                 }
             }
@@ -197,10 +201,8 @@ namespace DPM3D{
         int step;
         for(step=0;step<steps;step++)
         {   
-            std::thread t1(&DPM3D::Tissue::UpdateShapeForces,this);
-            std::thread t2(&DPM3D::Tissue::RetractingForceUpdate,this);
-            t1.join(); t2.join();
-
+            UpdateShapeForces();
+            RetractingForceUpdate();
             EulerUpdate(dt);
         }
     }
