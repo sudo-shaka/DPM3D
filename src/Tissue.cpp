@@ -20,7 +20,6 @@ namespace DPM3D{
     }
 
     void Tissue::MonolayerDisperse(){
-        double sumarea = 0.0;
         std::vector<double> X,Y,Fx,Fy;
         X.resize(NCELLS); Y.resize(NCELLS);
         Fx.resize(NCELLS); Fy.resize(NCELLS);
@@ -161,7 +160,7 @@ namespace DPM3D{
     void Tissue::RetractingForceUpdate(){
         int i,j,vi;//vj;
         glm::dvec3 comi, comj;
-        double avgdiameter,dx,dy,dz,dist,ftmp;
+        double dx,dy,dz,dist,ftmp;
         for(i=0;i<NCELLS;i++){
             comi = Cells[i].GetCOM();
             for(j=0;j<NCELLS;j++){
@@ -187,17 +186,28 @@ namespace DPM3D{
     }
 
 
+    void Tissue::UpdateShapeForces(){
+        for(int i=0;i<NCELLS;i++){
+            Cells[i].ShapeForceUpdate();
+        }
+    }
+
+
     void Tissue::EulerUpdate(int steps, double dt){
-        int i,step;
+        int step;
         for(step=0;step<steps;step++)
-        {
-            for(i=0;i<NCELLS;i++){
-                Cells[i].ShapeForceUpdate();
-            }
-            RetractingForceUpdate();
-            for(i=0;i<NCELLS;i++){
-                Cells[i].EulerUpdate(dt);
-            }
+        {   
+            std::thread t1(&DPM3D::Tissue::UpdateShapeForces,this);
+            std::thread t2(&DPM3D::Tissue::RetractingForceUpdate,this);
+            t1.join(); t2.join();
+
+            EulerUpdate(dt);
+        }
+    }
+
+    void Tissue::EulerUpdate(double dt){
+        for(int i=0;i<NCELLS;i++){
+            Cells[i].EulerUpdate(dt);
         }
     }
 

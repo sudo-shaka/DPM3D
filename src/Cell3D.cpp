@@ -12,6 +12,7 @@
 
 namespace DPM3D{
     //constructors
+
     Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _r0 ,double _Kv, double _Ka, double _Kb){
         calA0 = _calA0;
         r0 = _r0;
@@ -121,9 +122,10 @@ namespace DPM3D{
     }
 
     void Cell::ShapeForceUpdate(){
-        VolumeForceUpdate();
-        AreaForceUpdate();
-        BendingForceUpdate();
+        std::thread t1(&DPM3D::Cell::VolumeForceUpdate,this);
+        std::thread t2(&DPM3D::Cell::AreaForceUpdate,this);
+        std::thread t3(&DPM3D::Cell::BendingForceUpdate,this);
+        t1.join(); t2.join(); t3.join();
     }
 
     void Cell::EulerUpdate(int steps, double dt){
@@ -558,7 +560,7 @@ namespace DPM3D{
         glm::dvec3 A,B,com = GetCOM();
         double dist,ftmp,disttmp;
         std::vector<int> tri{0,0,0};
-        int ti,vi,si,siclosest,angle;
+        int ti,vi,si,siclosest;
 
         for(ti=0;ti<ntriangles;ti++){
             tri = FaceIndices[ti];
@@ -574,13 +576,11 @@ namespace DPM3D{
                         siclosest = si;
                     }
                 }
-                angle = acos(glm::dot(Positions[tri[vi]],com)/(glm::l2Norm(Positions[tri[vi]])*glm::l2Norm(com)));
                 if(Positions[tri[vi]].z < surfacepositions[0].z){
                     Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
                 }
                 else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = Ks*(1.0 - dist/(mindist))/mindist;
-                    //ftmp *= (M_PI/2)-angle; //based on angle
                     Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
                 }
             }
@@ -604,7 +604,6 @@ namespace DPM3D{
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/dist;
                     Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
-                    //ExtendVertex(tri[j],a0);
                 }
                 if(Positions[tri[j]].z < z){
                     Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
@@ -617,7 +616,7 @@ namespace DPM3D{
         glm::dvec3 A,B,com = GetCOM();
         double dist,ftmp,disttmp;
         std::vector<int> tri{0,0,0};
-        int ti,vi,si,siclosest,angle;
+        int ti,vi,si,siclosest;
 
         for(ti=0;ti<ntriangles;ti++){
             tri = FaceIndices[ti];
@@ -633,7 +632,6 @@ namespace DPM3D{
                         siclosest = si;
                     }
                 }
-                angle = acos(glm::dot(Positions[tri[vi]],com)/(glm::l2Norm(Positions[tri[vi]])*glm::l2Norm(com)));
                 if(Positions[tri[vi]].z < surfacepositions[0].z){
                     Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
                 }
@@ -674,7 +672,7 @@ namespace DPM3D{
                 glm::dvec3 A,B,com = GetCOM();
         double dist,ftmp,disttmp;
         std::vector<int> tri{0,0,0};
-        int ti,vi,si,siclosest,angle;
+        int ti,vi,si,siclosest;
 
         for(ti=0;ti<ntriangles;ti++){
             tri = FaceIndices[ti];
@@ -690,7 +688,6 @@ namespace DPM3D{
                         siclosest = si;
                     }
                 }
-                angle = acos(glm::dot(Positions[tri[vi]],com)/(glm::l2Norm(Positions[tri[vi]])*glm::l2Norm(com)));
                 if(Positions[tri[vi]].z < surfacepositions[0].z){
                     Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
                 }
