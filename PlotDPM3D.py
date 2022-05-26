@@ -58,7 +58,4 @@ def plottissue(Tissue):
             if plot:
                 ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]))
             ax.scatter(x,y,z,color=(r1[ci],r2[ci],r3[ci]))
-            #plt.xlabel('X'); plt.ylabel('Y')
-            #ax.grid(False)
-            ax.axis('off')
-            ax.view_init(-90,0)
+            ax.grid(False)
