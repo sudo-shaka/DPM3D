@@ -179,10 +179,9 @@ namespace DPM3D{
                 for(vi=0; vi<Cells[ci].NV;vi++){
                     if(overlaps[vi]){
                         rij = Cells[ci].Positions[vi] - comi;
-                        rij -= L*round(rij/L);
                         dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
                         ftmp = Kc*(1-dist)/Cells[ci].r0;
-                        Cells[ci].Forces[vi] -= ftmp * glm::normalize(rij);
+                        Cells[ci].Forces[vi] += ftmp * glm::normalize(rij);
                     }
                 }
             }
