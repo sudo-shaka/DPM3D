@@ -16,6 +16,7 @@ namespace DPM3D{
         Tissue(std::vector<DPM3D::Cell> Cells, double phi0);
 
         void RetractingForceUpdate();
+        void CellRetractingUpdate(int ci);
         void UpdateShapeForces();
         void EulerUpdate(int nsteps, double dt);
         void EulerUpdate(double dt);
