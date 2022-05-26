@@ -176,7 +176,7 @@ namespace DPM3D{
                 FindOverlaps(ci,j);
                 for(vi=0; vi<Cells[ci].NV;vi++){
                     if(overlaps[vi]){
-                        Cells[ci].Forces[vi] += Kc * glm::normalize(Cells[ci].Positions[vi] - com);
+                        Cells[ci].Forces[vi] += Kc * glm::normalize(com - Cells[ci].Positions[vi]);
                     }
                 }
             }
