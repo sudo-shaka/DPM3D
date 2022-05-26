@@ -6,9 +6,7 @@ import imageio
 
 Cell = DPM3D.Cell(x1=0,y1=0,z1=0,calA0=1.0, VertexRecursion=2,r0=1,Kv=1.0,Ka=1.0, Kb = 0.05)
 
-CellList = [Cell]*5;
-
-T = DPM3D.Tissue(Cells=CellList, phi0=0.75)
+T = DPM3D.Tissue(Cells=[Cell]*5, phi0=0.75)
 T.TissueDisperse()
 T.Kc = 20.0;
 
