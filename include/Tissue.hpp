@@ -11,8 +11,7 @@ namespace DPM3D{
         double Kc;
         double U;
         std::vector<DPM3D::Cell> Cells;
-        std::vector<bool> overlaps;
-
+        
         Tissue(std::vector<DPM3D::Cell> Cells, double phi0);
 
         void RetractingForceUpdate();
@@ -20,7 +19,7 @@ namespace DPM3D{
         void UpdateShapeForces();
         void EulerUpdate(int nsteps, double dt);
         void EulerUpdate(double dt);
-        void FindOverlaps(int ci, int cj);
+        std::vector<bool> FindOverlaps(int ci, int cj);
         void MonolayerDisperse();
         void TissueDisperse();
     };
