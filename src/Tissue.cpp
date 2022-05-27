@@ -163,17 +163,18 @@ namespace DPM3D{
         for(i=0;i<NCELLS;i++){
             threads.push_back(std::thread(&DPM3D::Tissue::CellRetractingUpdate,this,i));
         }
-        for(i=0;i<NCELLS;i++){
-            threads[i].join();
+        for(auto& th : threads){
+            th.join();
         }
     }
 
     void Tissue::CellRetractingUpdate(int ci){
         glm::dvec3 com = Cells[ci].GetCOM();
-        int vi;
+        std::vector<bool> overlaps;
+        int vi; 
         for(int j=0;j<NCELLS;j++){
             if(ci != j){
-                FindOverlaps(ci,j);
+                overlaps = FindOverlaps(ci,j);
                 for(vi=0; vi<Cells[ci].NV;vi++){
                     if(overlaps[vi]){
                         Cells[ci].Forces[vi] += Kc * glm::normalize(com - Cells[ci].Positions[vi]);
@@ -207,8 +208,9 @@ namespace DPM3D{
         }
     }
 
-    void Tissue::FindOverlaps(int ci, int cj){
+    std::vector<bool> Tissue::FindOverlaps(int ci, int cj){
         int vi;
+        std::vector<bool> overlaps;
         glm::dvec3 point, com = Cells[cj].GetCOM();
         overlaps.resize(Cells[ci].NV);
         for(vi = 0; vi < Cells[ci].NV; vi++){
@@ -217,6 +219,7 @@ namespace DPM3D{
             point += L * round(com/L);
             overlaps[vi] = Cells[cj].pointInside(point);
         }
+        return overlaps;
     }
 
 }
