@@ -171,7 +171,7 @@ namespace DPM3D{
     void Tissue::CellRetractingUpdate(int ci){
         glm::dvec3 com = Cells[ci].GetCOM();
         std::vector<bool> overlaps;
-        int vi; 
+        int vi;
         for(int j=0;j<NCELLS;j++){
             if(ci != j){
                 overlaps = FindOverlaps(ci,j);
@@ -195,7 +195,7 @@ namespace DPM3D{
     void Tissue::EulerUpdate(int steps, double dt){
         int step;
         for(step=0;step<steps;step++)
-        {   
+        {
             UpdateShapeForces();
             RetractingForceUpdate();
             EulerUpdate(dt);
