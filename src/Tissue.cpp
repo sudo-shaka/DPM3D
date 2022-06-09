@@ -1,3 +1,4 @@
+#include <cassert>
 #include <cmath>
 #include <Tissue.hpp>
 #include <vector>
@@ -169,15 +170,20 @@ namespace DPM3D{
     }
 
     void Tissue::CellRetractingUpdate(int ci){
-        glm::dvec3 com = Cells[ci].GetCOM();
+        glm::dvec3 com = Cells[ci].GetCOM(),delta;
         std::vector<bool> overlaps;
         int vi;
+        double rij,ftmp;
         for(int j=0;j<NCELLS;j++){
             if(ci != j){
                 overlaps = FindOverlaps(ci,j);
                 for(vi=0; vi<Cells[ci].NV;vi++){
                     if(overlaps[vi]){
-                        Cells[ci].Forces[vi] += Kc * glm::normalize(com - Cells[ci].Positions[vi]);
+                        delta = Cells[ci].Positions[vi] - com;
+                        delta -= L*round(delta/L);
+                        rij = sqrt(glm::dot(delta,delta));
+                        ftmp = Kc*((1-rij)/Cells[ci].r0);
+                        Cells[ci].Forces[vi] -= ftmp * glm::normalize(com-Cells[ci].Positions[vi]);
                     }
                 }
             }
@@ -209,11 +215,10 @@ namespace DPM3D{
     }
 
     std::vector<bool> Tissue::FindOverlaps(int ci, int cj){
-        int vi;
         std::vector<bool> overlaps;
         glm::dvec3 point, com = Cells[cj].GetCOM();
         overlaps.resize(Cells[ci].NV);
-        for(vi = 0; vi < Cells[ci].NV; vi++){
+        for(int vi = 0; vi < Cells[ci].NV; vi++){
             point = Cells[ci].Positions[vi];
             point -= L * round(point/L);
             point += L * round(com/L);

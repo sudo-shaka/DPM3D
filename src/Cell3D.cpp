@@ -12,7 +12,6 @@
 
 namespace DPM3D{
     //constructors
-
     Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _r0 ,double _Kv, double _Ka, double _Kb){
         calA0 = _calA0;
         r0 = _r0;
@@ -130,8 +129,8 @@ namespace DPM3D{
 
     void Cell::EulerUpdate(int steps, double dt){
         for(int i=0; i<steps;i++){
-            ShapeForceUpdate();
-            EulerUpdate(dt);
+          ShapeForceUpdate();
+          EulerUpdate(dt);
         }
     }
 
