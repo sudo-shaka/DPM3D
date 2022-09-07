@@ -23,6 +23,8 @@ namespace DPM3D {
             std::vector<glm::dvec3> Forces;
             std::vector<std::vector<int>> FaceIndices;
             std::vector<glm::dvec3> surfacepositions;
+            std::vector<int> Integrin;
+            std::vector<int> Cadherin;
             int  nsurfacep;
 
             Cell(double x1,double y1, double z1,
@@ -38,7 +40,7 @@ namespace DPM3D {
             void VolumeForceUpdate();
             void AreaForceUpdate();
             void BendingForceUpdate();
-            void SurfaceGradient(double x, double mindist);
+            void SurfaceGradient(double x, double mindist, double G);
             void StickToSurface(double x, double mindist);
             void StickToSurface(double mindist);
             void StickToSurfaceCatch(double mindist);
