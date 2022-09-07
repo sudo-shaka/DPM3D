@@ -5,6 +5,7 @@ namespace py = pybind11;
 void init_Cell(py::module &);
 void init_Tissue(py::module &);
 void init_dvec3(py::module &);
+void init_ECM(py::module &);
 
 namespace dpm {
 
@@ -13,5 +14,6 @@ namespace dpm {
         init_Cell(m);
         init_Tissue(m);
         init_dvec3(m);
+        init_ECM(m);
     }
 }
