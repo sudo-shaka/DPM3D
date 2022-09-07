@@ -4,14 +4,14 @@ import imageio
 from progressbar import progressbar
 import os
 
-Cell = DPM3D.Cell(x1=0,y1=0.0,z1=0.0,calA0=1.3,VertexRecursion=2,r0=1,Kv = 1.0, Ka = 1.0, Kb = 0.05)
-
-nout = 180; dt = 0.01; nsteps = 10;
+Cell = DPM3D.Cell(x1=0,y1=0.0,z1=97,calA0=1.3,VertexRecursion=3,r0=100,Kv = 1.0, Ka = 1.0, Kb = 0.0)
+Cell.Ks = 1.0;
+nout = 10; dt = 0.1; nsteps = 1000;
 
 for i in progressbar(range(nout)):
     for j in range(nsteps):
         Cell.EulerUpdate(1,dt);
-        Cell.UpdateShapeForces();
+        Cell.StickToSurface(0,10);
 
     fig = plt.figure(figsize=(12,12))
     ax = fig.add_subplot(projection='3d')

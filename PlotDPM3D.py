@@ -1,6 +1,13 @@
 import matplotlib.pyplot as plt
 from numpy import random, ceil
 
+def PlotECM(ECM,fig):
+  ax = fig.add_subplot(projection='3d')
+  X = [ECM.Positions[i].x for i in range(ECM.NP)]
+  Y = [ECM.Positions[i].y for i in range(ECM.NP)]
+  Z = [ECM.Positions[i].z for i in range(ECM.NP)]
+  ax.scatter(X,Y,Z,color='black')
+
 def plotcell(Cell):
     fig = plt.figure()
     ax = fig.add_subplot(projection='3d')
@@ -10,14 +17,14 @@ def plotcell(Cell):
         z = [Cell.Positions[i].z for i in tri];
         ax.plot(x,y,z,color='black');
         F = [abs(Cell.Forces[i].x) + abs(Cell.Forces[i].y) + abs(Cell.Forces[i].z) for i in tri];
-        ax.scatter(x,y,z,c=F,cmap='coolwarm')
+        ax.scatter(x,y,z,c=F,cmap='coolwarm',animated=True)
 
     #plt.show()
 
 def plottissue(Tissue):
     fig = plt.figure(figsize=(10,10))
     ax = fig.add_subplot(projection='3d')
-    random.seed(10)
+    random.seed(1)
     r1 = random.rand(Tissue.NCELLS)
     r2 = random.rand(Tissue.NCELLS)
     r3 = random.rand(Tissue.NCELLS)
@@ -56,10 +63,10 @@ def plottissue(Tissue):
             ax.set_ylim(0,Tissue.L);
             ax.set_zlim(0,Tissue.L);
             if plot:
-                ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]))
+                ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]),animated=True)
 def plottissue2D(Tissue):
     fig = plt.figure(figsize=(10,10))
-    random.seed(10)
+    random.seed(1)
     r1 = random.rand(Tissue.NCELLS)
     r2 = random.rand(Tissue.NCELLS)
     r3 = random.rand(Tissue.NCELLS)
@@ -89,6 +96,7 @@ def plottissue2D(Tissue):
                 if (abs(xt[0] - xt[-1])**2 + abs(yt[0] - yt[-1])**2) < Tissue.L:
                     plot = True
             if plot:
-                plt.plot(x,y,color=(r1[ci],r2[ci],r3[ci]))
-            plt.scatter(x,y,color=(r1[ci],r2[ci],r3[ci]))
-            plt.axis('equal')
+                plt.plot(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
+            plt.scatter(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
+            plt.xlim([0,Tissue.L])
+            plt.ylim([0,Tissue.L])
