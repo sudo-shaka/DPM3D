@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from numpy import random, ceil
+import gc
 
 def PlotECM(ECM,fig):
   ax = fig.add_subplot(projection='3d')
@@ -100,3 +101,5 @@ def plottissue2D(Tissue):
             plt.scatter(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
             plt.xlim([0,Tissue.L])
             plt.ylim([0,Tissue.L])
+    del x,y,plot,xt,yt
+    gc.collect()
