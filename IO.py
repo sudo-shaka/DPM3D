@@ -1,3 +1,22 @@
+def OutCellToObj(filename,Cell):
+  X = [Cell.Positions[i].x for i in range(Cell.NV)]
+  Y = [Cell.Positions[i].y for i in range(Cell.NV)]
+  Z = [Cell.Positions[i].z for i in range(Cell.NV)]
+  string = ["v {:.4f} {:.4f} {:.4f}\n".format(X[i], Y[i], Z[i]) for i in range(Cell.NV)]
+  with open(filename,'w') as out:
+    out.write("# OBJ file\n")
+    out.write("o Cell\n")
+    for i in range(Cell.NV):
+      out.write(string[i])
+    for i in range(len(Cell.TriangleIndex)):
+      face = Cell.TriangleIndex[i]
+      face = [f+1 for f in face]
+      fstring = "f "+str(face[0])+" "+str(face[1])+" "+str(face[2]) + "\n"
+      out.write(fstring)
+
+  out.close()
+
+
 def OutCellToFile(filename,Cell):
   X = [Cell.Positions[i].x for i in range(Cell.NV)]
   Y = [Cell.Positions[i].y for i in range(Cell.NV)]
