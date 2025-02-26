@@ -1,14 +1,16 @@
+#define GLM_ENABLE_EXPERIMENTAL
 #include <cmath>
 #include <Cell3D.hpp>
 #include <vector>
+#include <array>
 #include <iostream>
+#include <algorithm>
 #include <bits/stdc++.h>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 #include <glm/mat3x3.hpp>
 #include <glm/gtx/norm.hpp>
-#include <thread>
-
 namespace DPM3D{
     //constructors
     Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _r0 ,double _Kv, double _Ka, double _Kb){
@@ -93,8 +95,8 @@ namespace DPM3D{
         NV = (int)Positions.size();
         Velocities.resize(NV);
         Forces.resize(NV);
-        Cadherin.resize(NV);
-        Integrin.resize(NV);
+        isJunction.resize(NV);
+        isFocalAdh.resize(NV);
         ntriangles = FaceIndices.size();
 
         v0 = (4.0/3.0)*M_PI*pow(r0,3);
@@ -105,8 +107,6 @@ namespace DPM3D{
             Positions[i].x += _x;
             Positions[i].y += _y;
             Positions[i].z += _z;
-            Cadherin[i] = 0;
-            Integrin[i] = 0;
         }
         midpointCache.clear();
         midpointCache.shrink_to_fit();
@@ -141,8 +141,6 @@ namespace DPM3D{
         for(int i=0;i<NV;i++){
             Velocities[i] = 0.5*Forces[i];
             Positions[i] += Forces[i]*dt;
-            Cadherin[i]--;
-            Integrin[i]--;
         }
         ResetForces();
     }
@@ -606,6 +604,7 @@ namespace DPM3D{
             A = Positions[tri[1]] - Positions[tri[0]];
             B = Positions[tri[2]] - Positions[tri[0]];
             for(vi=0;vi<3;vi++){
+                isFocalAdh[tri[vi]] = false;
                 dist = distance(surfacepositions[0],Positions[tri[vi]]);
                 siclosest = 0;
                 for(si=0;si<nsurfacep;si++){
@@ -622,8 +621,10 @@ namespace DPM3D{
                     ftmp = Ks*(1.0 - dist/(mindist))/mindist;
                     Forces[tri[vi]] += 0.5 * ftmp * (glm::normalize(surfacepositions[siclosest]- Positions[tri[vi]]));
                     Forces[tri[vi]] += 0.5 * ftmp * (glm::normalize(Positions[tri[vi]]-com));
+                    isFocalAdh[tri[vi]] = true;
                     //Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
                 }
+
             }
         }
     }
@@ -639,12 +640,14 @@ namespace DPM3D{
             A = Positions[tri[1]] - Positions[tri[0]];
             B = Positions[tri[2]] - Positions[tri[0]];
             for(int j=0; j<3;j++){
+                isFocalAdh[tri[j]] = false;
                 surfacepos = Positions[tri[j]];
                 surfacepos.z = z;
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/dist;
                     Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    isFocalAdh[tri[j]] = true;
                 }
                 if(Positions[tri[j]].z < z){
                     Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
@@ -888,7 +891,121 @@ namespace DPM3D{
         return (n_crosses % 2 != 0);
     }
 
+    std::array<std::vector<double>,2> Cell::getJunctionPoints(){
+      std::array<std::vector<double>,2> points;
+      std::vector<glm::dvec2> points2D;
+      points2D.resize(NV);
+      for(int vi=0; vi < NV; vi++){
+        points2D[vi] = glm::dvec2{Positions[vi].x,Positions[vi].y};
+      }
+
+      //now use grahams scan to find junctional points "convex hull points"
+
+      //find the lowest point
+      int ymin = points2D[0].y, min = 0;
+      for(int pi=1;pi < NV; pi++){
+        int y = points2D[pi].y;
+        if((y < ymin) || (ymin == y && points2D[pi].x < points2D[min].x))
+          ymin = points2D[pi].y, min = pi;
+      }
+      std::swap(points2D[min],points2D[0]);
+
+      //set anchor
+      glm::dvec2 p0 = points2D[0];
+
+      //sort by polar angle
+      std::sort(points2D.begin() + 1, points2D.end(), [p0](const glm::dvec2& a, const glm::dvec2& b){
+          glm::dvec2 vecA = a - p0, vecB = b - p0;
+          double cross = vecA.x * vecB.y - vecA.y * vecB.x;
+          return (cross >0) || (cross == 0 && length(vecA) < length(vecB));
+        });
+
+      std::vector<glm::dvec2> hull;
+
+      for(auto& p : points2D){
+        while(hull.size() >= 2){
+          glm::vec2 top = hull.back(), sTop = hull[hull.size() - 2];
+          if((top.x - sTop.x) * (p.y - top.y) - (top.y - sTop.y) * (p.x - top.x) > 0){
+            break;
+          }
+          hull.pop_back();
+        }
+        hull.push_back(p);
+      }
+
+      for(long unsigned int i = 0; i < hull.size(); i++){
+        points[0].push_back(hull[i].x);
+        points[1].push_back(hull[i].y);
+      }
+      return points;
+    }
+
+    void Cell::FindJunctions(){
+      //convert 3D to 2D projection looking from the top of the Cell3D
+
+      //point projection to 2D from Z direction
+      std::vector<std::pair<glm::dvec2,int>> projected;
+      //std::vector<glm::dvec2> points2D;
+      //points2D.resize(NV);
+      for(int vi=0; vi < NV; vi++){
+        //points2D[vi] = glm::dvec2{Positions[vi].x,Positions[vi].y};
+        projected.emplace_back(glm::dvec2{Positions[vi].x,Positions[vi].y},vi);
+      }
+
+      //now use grahams scan to find junctional points "convex hull points"
+
+      //find the lowest point
+      auto minIt = std::min_element(projected.begin(), projected.end(),
+          [](const auto& a, const auto& b){
+           return a.first.x < b.first.y || (a.first.y == b.first.y && a.first.x < b.first.x); 
+          });
+
+      std::swap(projected[0],*minIt);
+      glm::dvec2 p0 = projected[0].first; //set anchor
+
+      //sort by polar angle
+      std::sort(projected.begin() + 1, projected.end(), [p0](const auto& a, const auto& b){
+          glm::dvec2 vecA = a.first - p0, vecB = b.first - p0;
+          double cross = vecA.x * vecB.y - vecA.y * vecB.x;
+          return (cross >0) || (cross == 0 && length(vecA) < length(vecB));
+        });
+
+      std::vector<glm::dvec2> hull;
+      std::vector<int> hullidx;
+
+      for(auto& [p,index] : projected){
+        while(hull.size() >= 2){
+          glm::vec2 top = hull.back(), sTop = hull[hull.size() - 2];
+          if((top.x - sTop.x) * (p.y - top.y) - (top.y - sTop.y) * (p.x - top.x) > 0)
+          {
+            break;
+          }
+          hullidx.pop_back();
+          hull.pop_back();
+        }
+        hull.push_back(p);
+        hullidx.push_back(index);
+      }
+
+      std::fill(isJunction.begin(),isJunction.end(),false);
+
+      for(int index : hullidx){
+        isJunction[index] = true;
+      }
+
+    }
+
+    void Cell::FindFocalAdhesion(){
+      return;
+    }
+
     //The following functions are for construction and vector maniplulations
+
+    int orientation(glm::dvec2 p, glm::dvec2 q, glm::dvec2 r){
+      int val = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y);
+      if(val == 0) return 0;
+      return (val = 0)? 1 : 2;
+    }
 
     void Cell::AddFaceIndex(int a, int b, int c){
         std::vector<int> idx{a,b,c};

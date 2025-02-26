@@ -1,5 +1,7 @@
 #include <vector>
+#include <array>
 #include <glm/vec3.hpp>
+#include <glm/vec2.hpp>
 namespace DPM3D {
     class Cell
     {
@@ -23,8 +25,8 @@ namespace DPM3D {
             std::vector<glm::dvec3> Forces;
             std::vector<std::vector<int>> FaceIndices;
             std::vector<glm::dvec3> surfacepositions;
-            std::vector<int> Integrin;
-            std::vector<int> Cadherin;
+            std::vector<bool> isJunction;
+            std::vector<bool> isFocalAdh;
             int  nsurfacep;
 
             Cell(double x1,double y1, double z1,
@@ -40,6 +42,9 @@ namespace DPM3D {
             void VolumeForceUpdate();
             void AreaForceUpdate();
             void BendingForceUpdate();
+            void FindJunctions();
+            std::array<std::vector<double>,2> getJunctionPoints();
+            void FindFocalAdhesion();
             void SurfaceGradient(double x, double mindist, double G);
             void StickToSurface(double x, double mindist);
             void StickToSurface(double mindist);
@@ -68,11 +73,13 @@ namespace DPM3D {
     };
 
     glm::dvec3 GetMiddlePoint(glm::dvec3 a, glm::dvec3 b);
+    bool polarCompare(glm::dvec2& a, glm::dvec2& b, glm::dvec2& p0);
     std::vector<int> newFace(int a, int b, int c);
     double urandom();
     double norm(glm::dvec3 vec);
     double norm2(glm::dvec3 vec);
     double distance(glm::dvec3 a,glm::dvec3 b);
     double distanceSq(glm::dvec3 a,glm::dvec3 b);
+    int orientation(glm::dvec2 a, glm::dvec2 b, glm::dvec2 c);
 
 }

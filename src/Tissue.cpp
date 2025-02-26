@@ -1,7 +1,10 @@
+#define GLM_ENABLE_EXPERIMENTAL
 #include <cassert>
 #include <cmath>
-#include <Tissue.hpp>
+#include "Tissue.hpp"
 #include <vector>
+#include <array>
+#include <string>
 #include <iostream>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
@@ -15,10 +18,11 @@ namespace DPM3D{
         NCELLS = Cells.size();
         double volume = 0.0;
         for(int i=0; i<NCELLS;i++){
-            volume+=(4/3)*M_PI*pow(Cells[i].r0,3);
+            volume+=(4.0f/3.0f)*M_PI*pow(Cells[i].r0,3);
         }
         L = cbrt(volume)/phi0;
         PBC = true;
+        attactionMethod.assign("General");
     }
 
     void Tissue::MonolayerDisperse(){
@@ -44,12 +48,12 @@ namespace DPM3D{
             for(i=0;i<NCELLS;i++){
                 xi = X[i];
                 yi = Y[i];
-                ri = Cells[i].r0;
+                ri = Cells[i].r0*2;
                 for(j=0;j<NCELLS;j++){
                     if(j != i){
                         xj = X[j];
                         yj = Y[j];
-                        rj = Cells[j].r0;
+                        rj = Cells[j].r0*2;
                         dx = xj-xi;
                         dx -= L*round(dx/L);
                         dy = yj-yi;
@@ -169,21 +173,90 @@ namespace DPM3D{
             th.join();
         }
     }
-    void Tissue::CellInteractingUpdate(int ci){
-      std::vector<int> tri{0,0,0}, trij{0,0,0};
-      int vi,vj,fi,cj,fj,NT = Cells[ci].ntriangles;
-      glm::dmat3 PI, PJ;
-      glm::dvec3 rij, normali, normalj, FaceCenterI, FaceCenterJ;
-      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
-      double dist;
-      glm::dvec3 com = Cells[ci].GetCOM();
 
-      //Attractive Forces
-      for(vi=0; vi < Cells[ci].NV; vi++){
-        for(cj=0;cj<NCELLS;cj++){
+
+    void Tissue::UpdateJunctions(){
+      std::vector<std::thread> threads;
+      for(int i=0; i<NCELLS;i++){
+        threads.push_back(std::thread(&DPM3D::Cell::FindJunctions,&this->Cells[i]));
+      }
+      for(auto& th : threads){
+        th.join();
+      }
+    }
+
+    void Tissue::JunctionSlipForceUpdate(int ci){
+      UpdateJunctions();
+      double dist, l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      glm::dvec3 com = Cells[ci].GetCOM();
+      for(int vi = 0;vi < Cells[ci].NV; vi++){
+        if(Cells[ci].isJunction[vi]){
+          for(int cj = 0; cj < NCELLS; cj++){
+            if(ci != cj){
+              for(int vj=0;vj<Cells[cj].NV;vj++){
+                if(Cells[cj].isJunction[vj]){
+                  glm::dvec3 rij = Cells[ci].Positions[vj] - Cells[ci].Positions[vi];
+                  if(PBC){rij-= L*round(rij/L);}
+                  dist = sqrt(dot(rij,rij));
+                  if(dist < l0 && distance(com,Cells[cj].Positions[vj]) > distance(com,Cells[ci].Positions[vi])){
+                      Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) * glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    void Tissue::JunctionCatchForceUpdate(int ci){
+      UpdateJunctions();
+      double mindist=Cells[ci].r0*2;
+      int bindingcellindex=-1, bindingvertindex=-1;
+      bool found = false;
+      glm::dvec3 minrij;
+      for(int vi=0;vi<Cells[ci].NV;ci++){
+        found = false;
+        if(!Cells[ci].isJunction[vi]){
+          continue;
+        }
+        for(int cj=0;cj<NCELLS;cj++){
+          if(ci == cj){
+            continue;
+          }
+          for(int vj=0;vj<Cells[cj].NV;vj++){
+            if(!Cells[cj].isJunction[vj]){
+              continue;
+            }
+            glm::dvec3 rij = Cells[ci].Positions[vj] - Cells[ci].Positions[vi];
+            if(PBC){rij -= L*round(rij/L);};
+            double dist = sqrt(dot(rij,rij));
+            if(dist < mindist){
+              mindist = dist;
+              found = true;
+              bindingcellindex = cj;
+              bindingvertindex = vj;
+              minrij = rij;
+              }
+            }
+          }
+        if(found){
+          double sij = sqrt(Cells[ci].v0);
+          double ftmp = Kat * (1.0-(mindist/sij)/sij);
+          Cells[ci].Forces[vi] -= Kat * ftmp * 0.5 * glm::normalize(Cells[bindingcellindex].Positions[bindingvertindex] - Cells[ci].Positions[vi]);
+        }
+      }
+    }
+
+    void Tissue::GeneralAttraction(int ci){
+      double dist;
+      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      glm::dvec3 com = Cells[ci].GetCOM();
+      for(int vi=0; vi < Cells[ci].NV; vi++){
+        for(int cj=0;cj<NCELLS;cj++){
           if(ci!=cj){
-            for(vj=0;vj<Cells[cj].NV;vj++){
-              rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
+            for(int vj=0;vj<Cells[cj].NV;vj++){
+              glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
               if(PBC){
                 rij -= L*round(rij/L);
               }
@@ -196,6 +269,34 @@ namespace DPM3D{
           }
         }
        }
+    }
+
+    void Tissue::CellInteractingUpdate(int ci){
+      std::vector<int> tri{0,0,0}, trij{0,0,0};
+      int fi,cj,fj,NT = Cells[ci].ntriangles;
+      glm::dmat3 PI, PJ;
+      glm::dvec3 rij, normali, normalj, FaceCenterI, FaceCenterJ;
+      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      double dist;
+      glm::dvec3 com = Cells[ci].GetCOM();
+
+      if(Kat != 0){
+        if(attactionMethod == "JunctionSlip"){
+          JunctionSlipForceUpdate(ci);
+        }
+        else if(attactionMethod == "JunctionCatch"){
+          JunctionCatchForceUpdate(ci);
+        }
+        else if(attactionMethod == "General"){
+          GeneralAttraction(ci);
+        }
+        else{
+          std::cerr << attactionMethod << " is not a valid attaction method\n" << 
+            "please use JunctionSlip, JunctionCatch, or General" << std::endl;
+          exit(1);
+        }
+      }
+
       //Repulsive Faces
       for(fi=0;fi<NT;fi++){
         tri = Cells[ci].FaceIndices[fi];
@@ -222,15 +323,7 @@ namespace DPM3D{
                 Cells[ci].Forces[tri[0]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[0]]);
                 Cells[ci].Forces[tri[1]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[1]]);
                 Cells[ci].Forces[tri[2]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[2]]);
-//                Cells[ci].Forces[tri[1]] -= dist*0.5*Kre*glm::normalize(normali);
-//                Cells[ci].Forces[tri[2]] -= dist*0.5*Kre*glm::normalize(normali);
               }
-              //Another Attractive method
-              //else if(dist < l0){
-              //  Cells[ci].Forces[tri[0]] -= Kat * 0.5 * ((dist/l0) - 1.0) * glm::normalize(FaceCenterJ-FaceCenterI);
-              //  Cells[ci].Forces[tri[1]] -= Kat * 0.5 * ((dist/l0) - 1.0) * glm::normalize(FaceCenterJ-FaceCenterI);
-              //  Cells[ci].Forces[tri[2]] -= Kat * 0.5 * ((dist/l0) - 1.0) * glm::normalize(FaceCenterJ-FaceCenterI);
-              //}
             }
           }
         }
@@ -238,8 +331,12 @@ namespace DPM3D{
     }
 
     void Tissue::UpdateShapeForces(){
+      std::vector<std::thread> threads;
         for(int i=0;i<NCELLS;i++){
-            Cells[i].ShapeForceUpdate();
+          threads.push_back(std::thread(&DPM3D::Cell::ShapeForceUpdate,&this->Cells[i]));
+        }
+        for(auto& th : threads){
+          th.join();
         }
     }
 
@@ -266,6 +363,34 @@ namespace DPM3D{
             InteractingUpdate();
             EulerUpdate(dt);
         }
+    }
+
+    void Tissue::applyShearStress(std::array<double,3> _fluidVelocity, double viscosity, double velocityGradient, double stiffness){
+      glm::dvec3 fluidVelocity = {_fluidVelocity[0],_fluidVelocity[1],_fluidVelocity[2]};
+      if(stiffness == 0)
+        return;
+      if(fluidVelocity.x == 0 && fluidVelocity.y == 0 && fluidVelocity.z ==0)
+        return;
+      if(viscosity==0)
+        return;
+
+      for(auto cell : Cells){
+        int flen = cell.FaceIndices.size();
+        for(int fi=0;fi < flen; fi++){
+          glm::ivec3 face = {cell.FaceIndices[fi][0],cell.FaceIndices[fi][1],cell.FaceIndices[fi][2]};
+          glm::dvec3 p1 = cell.Positions[face[0]];
+          glm::dvec3 p2 = cell.Positions[face[1]];
+          glm::dvec3 p3 = cell.Positions[face[2]];
+          glm::dvec3 normal = glm::normalize(glm::cross((p2-p1),(p3-p1)));
+          glm::dvec3 velocityParrallel = fluidVelocity - glm::dot(fluidVelocity,normal) * normal;
+          glm::dvec3 shearStress = viscosity * velocityGradient * velocityParrallel;
+          double area = cell.GetArea(fi);
+          glm::dvec3 shearForce = shearStress * area;
+          cell.Forces[face[0]] += shearForce * stiffness;
+          cell.Forces[face[1]] += shearForce * stiffness;
+          cell.Forces[face[2]] += shearForce * stiffness;
+        }
+      }
     }
 
     void Tissue::InteractECM(DPM3D::ECM ECM){
@@ -309,5 +434,4 @@ namespace DPM3D{
         }
         return overlaps;
     }
-
 }
