@@ -4,7 +4,7 @@ PYBIND11_INCLUDE := $(shell python3 -m pybind11 --includes | cut -d' ' -f2)
 
 CXX := g++
 CXXFLAGS := -O3 -Wall -shared -std=c++17 -fPIC
-INCLUDES := -I$(PYTHON_INCLUDE) -I$(PYBIND11_INCLUDE) -Iinclude -I/usr/include/c++/11/
+INCLUDES := -I$(PYTHON_INCLUDE) -I$(PYBIND11_INCLUDE) -I include/
 SRC := $(wildcard src/*.cpp)
 OUT := DPM3D$(shell python3-config --extension-suffix)
 
