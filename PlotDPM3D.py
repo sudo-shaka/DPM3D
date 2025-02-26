@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import numpy as np
 from numpy import random, ceil
 import gc
 
@@ -65,8 +66,54 @@ def plottissue(Tissue):
             ax.set_zlim(0,Tissue.L);
             if plot:
                 ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]),animated=True)
-def plottissue2D(Tissue):
+
+
+def  MapToCylinder(point, radius, scale):
+    theta = point.x * scale;
+    x = (radius-point.z) * np.cos(theta)
+    z = (radius-point.z) * np.sin(theta)
+    y = point.y
+
+    return x,y,z
+
+
+def plotVessel3D(Tissue):
     fig = plt.figure(figsize=(10,10))
+    ax = fig.add_subplot(projection='3d')
+    ax.set_xlim(-Tissue.L/2,Tissue.L/2);
+    ax.set_ylim(-Tissue.L/2,Tissue.L/2);
+    ax.set_zlim(0,Tissue.L);
+    r1 = random.rand(Tissue.NCELLS)
+    r2 = random.rand(Tissue.NCELLS)
+    r3 = random.rand(Tissue.NCELLS)
+    for ci in range(Tissue.NCELLS):
+        [x,y,z] = Tissue.GetVesselPositions(ci)
+        ax.scatter(x,y,z,color=(r1[ci],r2[ci],r3[ci]))
+
+
+def plotVessel(Tissue):
+    fig = plt.figure(figsize=(10,10))
+    ax = fig.add_subplot(projection='3d')
+    random.seed(1)
+    ax.set_xlim(-Tissue.L/2,Tissue.L/2);
+    ax.set_ylim(-Tissue.L/2,Tissue.L/2);
+    ax.set_zlim(0,Tissue.L);
+    r1 = random.rand(Tissue.NCELLS)
+    r2 = random.rand(Tissue.NCELLS)
+    r3 = random.rand(Tissue.NCELLS)
+    radius = Tissue.L/(2*np.pi)
+    scale = (2*np.pi)/Tissue.L
+    for ci in range(Tissue.NCELLS):
+        Cell = Tissue.Cells[ci];
+        for tri in Cell.TriangleIndex:
+            points = [Cell.Positions[i] for i in tri];
+            for p in points:
+                x,y,z = MapToCylinder(p,radius,scale)
+                ax.scatter(x,y,z, color=(r1[ci],r2[ci],r3[ci]),animated=True)
+
+
+def plottissue2D(Tissue):
+    plt.figure(figsize=(10,10))
     random.seed(1)
     r1 = random.rand(Tissue.NCELLS)
     r2 = random.rand(Tissue.NCELLS)
@@ -76,6 +123,8 @@ def plottissue2D(Tissue):
         for tri in Cell.TriangleIndex:
             x = [Cell.Positions[i].x for i in tri]
             y = [Cell.Positions[i].y for i in tri]
+            j = [Cell.isJunction[i] for i in tri]
+            a = [Cell.isFocalAdhesion[i] for i in tri]
             plot = True
             for i in range(3):
                 if x[i] < 0:
@@ -91,6 +140,12 @@ def plottissue2D(Tissue):
                 if y[i] > Tissue.L:
                     y[i] -= Tissue.L * ceil((y[i]-Tissue.L)/Tissue.L)
                     plot = False
+                if j[i]:
+                    plt.scatter(x[i],y[i], color='black',animated=True)
+                elif a[i]:
+                    plt.scatter(x[i],y[i], color='red',animated=True)
+                else:
+                    plt.scatter(x[i],y[i], color=(r1[ci],r2[ci],r2[ci]),animated=True)
 
             xt = sorted(x);yt = sorted(y)
             if plot == False:
@@ -98,7 +153,6 @@ def plottissue2D(Tissue):
                     plot = True
             if plot:
                 plt.plot(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
-            plt.scatter(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
             plt.xlim([0,Tissue.L])
             plt.ylim([0,Tissue.L])
     del x,y,plot,xt,yt
