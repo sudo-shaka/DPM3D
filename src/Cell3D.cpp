@@ -128,6 +128,9 @@ namespace DPM3D{
         std::thread t2(&DPM3D::Cell::AreaForceUpdate,this);
         std::thread t3(&DPM3D::Cell::BendingForceUpdate,this);
         t1.join(); t2.join(); t3.join();
+        /*VolumeForceUpdate();
+        AreaForceUpdate();
+        BendingForceUpdate();*/
     }
 
     void Cell::EulerUpdate(int steps, double dt){
@@ -316,7 +319,7 @@ namespace DPM3D{
     }
 
     void Cell::BendingForceUpdate(){
-      if(Kb > 0.0001){
+      if(Kb > 0.001){
         int i, j,k,t,c;
         std::vector<std::vector<int>> corner;
         std::vector<int> tri{0,0,0},UsedIndexes,usedPositions;

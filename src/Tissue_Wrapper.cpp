@@ -30,6 +30,7 @@ void init_Tissue(py::module &m){
     .def("JunctionSlipForceUpdate",&DPM3D::Tissue::JunctionSlipForceUpdate)
     .def("JunctionCatchForceUpdate",&DPM3D::Tissue::JunctionSlipForceUpdate)
     .def("UpdateJunctions",&DPM3D::Tissue::UpdateJunctions)
+    .def("GetVesselPositions",&DPM3D::Tissue::GetVesselPosition)
     .def("applyShearStress",&DPM3D::Tissue::applyShearStress)
     ;
 }

@@ -1,3 +1,6 @@
+#ifndef __TISSUE__
+#define __TISSUE__
+
 #include <vector>
 #include "Cell3D.hpp"
 #include "ECM.hpp"
@@ -35,6 +38,9 @@ namespace DPM3D{
         void JunctionSlipForceUpdate(int ci);
         void JunctionCatchForceUpdate(int ci);
         void GeneralAttraction(int ci);
+        std::vector<std::vector<double>> GetVesselPosition(int ci);
         void applyShearStress(std::array<double,3> fluidVelocity, double viscosity, double velocityGradient, double stiffness);
     };
 }
+
+#endif

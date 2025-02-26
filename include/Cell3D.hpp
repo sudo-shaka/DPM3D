@@ -2,6 +2,9 @@
 #include <array>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+
+#ifndef __CELL3D__
+#define __CELL3D__
 namespace DPM3D {
     class Cell
     {
@@ -83,3 +86,5 @@ namespace DPM3D {
     int orientation(glm::dvec2 a, glm::dvec2 b, glm::dvec2 c);
 
 }
+
+#endif

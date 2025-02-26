@@ -188,18 +188,17 @@ namespace DPM3D{
     void Tissue::JunctionSlipForceUpdate(int ci){
       UpdateJunctions();
       double dist, l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
-      glm::dvec3 com = Cells[ci].GetCOM();
       for(int vi = 0;vi < Cells[ci].NV; vi++){
         if(Cells[ci].isJunction[vi]){
           for(int cj = 0; cj < NCELLS; cj++){
             if(ci != cj){
               for(int vj=0;vj<Cells[cj].NV;vj++){
                 if(Cells[cj].isJunction[vj]){
-                  glm::dvec3 rij = Cells[ci].Positions[vj] - Cells[ci].Positions[vi];
+                  glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
                   if(PBC){rij-= L*round(rij/L);}
                   dist = sqrt(dot(rij,rij));
-                  if(dist < l0 && distance(com,Cells[cj].Positions[vj]) > distance(com,Cells[ci].Positions[vi])){
-                      Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) * glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
+                  if(dist < l0){
+                      Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) * (rij/dist);
                   }
                 }
               }
@@ -211,12 +210,9 @@ namespace DPM3D{
 
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
-      double mindist=Cells[ci].r0*2;
-      int bindingcellindex=-1, bindingvertindex=-1;
-      bool found = false;
-      glm::dvec3 minrij;
       for(int vi=0;vi<Cells[ci].NV;ci++){
-        found = false;
+        glm::dvec3 *minrij = NULL;
+        double mindist=Cells[ci].r0*2;
         if(!Cells[ci].isJunction[vi]){
           continue;
         }
@@ -228,22 +224,20 @@ namespace DPM3D{
             if(!Cells[cj].isJunction[vj]){
               continue;
             }
-            glm::dvec3 rij = Cells[ci].Positions[vj] - Cells[ci].Positions[vi];
+            glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
             if(PBC){rij -= L*round(rij/L);};
             double dist = sqrt(dot(rij,rij));
             if(dist < mindist){
               mindist = dist;
-              found = true;
-              bindingcellindex = cj;
-              bindingvertindex = vj;
-              minrij = rij;
+              minrij = &rij;
               }
             }
           }
-        if(found){
+        if(minrij){
+          glm::dvec3 delta = *minrij;
           double sij = sqrt(Cells[ci].v0);
           double ftmp = Kat * (1.0-(mindist/sij)/sij);
-          Cells[ci].Forces[vi] -= Kat * ftmp * 0.5 * glm::normalize(Cells[bindingcellindex].Positions[bindingvertindex] - Cells[ci].Positions[vi]);
+          Cells[ci].Forces[vi] -= Kat * ftmp * 0.5 * (delta/mindist);
         }
       }
     }
@@ -251,7 +245,7 @@ namespace DPM3D{
     void Tissue::GeneralAttraction(int ci){
       double dist;
       double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
-      glm::dvec3 com = Cells[ci].GetCOM();
+//      glm::dvec3 com = Cells[ci].GetCOM();
       for(int vi=0; vi < Cells[ci].NV; vi++){
         for(int cj=0;cj<NCELLS;cj++){
           if(ci!=cj){
@@ -261,7 +255,8 @@ namespace DPM3D{
                 rij -= L*round(rij/L);
               }
               dist = sqrt(glm::dot(rij,rij));
-              if(dist < l0 && distance(com,Cells[cj].Positions[vj]) > distance(com,Cells[ci].Positions[vi])){
+              //if(dist < l0 && distance(com,Cells[cj].Positions[vj]) > distance(com,Cells[ci].Positions[vi])){
+              if(dist < l0){
                 Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
                   glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
               }
@@ -433,5 +428,25 @@ namespace DPM3D{
             overlaps[vi] = Cells[cj].pointInside(point);
         }
         return overlaps;
+    }
+
+    std::vector<std::vector<double>> Tissue::GetVesselPosition(int ci){
+      std::vector<std::vector<double>> vesselPosition;
+      if(!PBC){
+        return vesselPosition;
+      }
+      DPM3D::Cell c = Cells[ci];
+      vesselPosition.resize(3);
+      for(int i=0; i<3;i++){
+        vesselPosition[i].resize(c.NV);
+      }
+      double scale = (2.0*M_PI)/L, radius = L/(2*M_PI);
+      for(int vi=0;vi<c.NV;vi++){
+        double theta = c.Positions[vi].x * scale;
+        vesselPosition[0][vi] = (radius-c.Positions[vi].z) * cos(theta);
+        vesselPosition[2][vi] = (radius-c.Positions[vi].z) * sin(theta);
+        vesselPosition[1][vi] = c.Positions[vi].y;
+      }
+      return vesselPosition;
     }
 }
