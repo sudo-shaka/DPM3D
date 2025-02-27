@@ -111,6 +111,28 @@ namespace DPM3D{
         midpointCache.clear();
         midpointCache.shrink_to_fit();
     }
+    
+    Cell::Cell(std::vector<double> X, std::vector<double> Y, std::vector<double> Z, std::vector<std::vector<int>> Faces){
+        Kv = 0.0;
+        Ka = 0.0;
+        Kb = 0.0;
+        if(X.size() != Y.size() && Y.size() != Z.size()){
+          std::cout << "X Y and Z are not the same lengths" << std::endl;
+          return;
+        }
+        NV = X.size();
+        Positions.resize(NV);
+        int i;
+        for(i=0; i<(int)Faces.size(); i++){
+          AddFaceIndex(Faces[i][0],Faces[i][1],Faces[i][2]);
+        }
+        for(i=0; i<NV; i++){
+          Positions[i] = glm::vec3(X[i],Y[i],Z[i]);
+        }
+
+        Velocities.resize(NV);
+        Forces.resize(NV);
+    }
 
     void Cell::ResetForces(){
         for(int vi=0;vi<NV;vi++){
@@ -513,6 +535,7 @@ namespace DPM3D{
         }
         return Forces;
     }
+
     void Cell::SurfaceGradient(double z, double mindist, double grad){
         glm::dvec3 surfacepos, A,B, com = GetCOM();
         double dist, ftmp;
@@ -543,34 +566,6 @@ namespace DPM3D{
         }
     }
 
-    /*  void Cell::SurfaceGradient(double z, double mindist){
-        glm::dvec3 surfacepos, A,B, com = GetCOM();
-        double dist, ftmp;
-        std::vector<int> tri{0,0,0};
-        for(int i=0;i<ntriangles;i++){
-            tri = FaceIndices[i];
-            A = Positions[tri[1]] - Positions[tri[0]];
-            B = Positions[tri[2]] - Positions[tri[0]];
-            for(int j=0; j<3;j++){
-                surfacepos = Positions[tri[j]];
-                surfacepos.z = z;
-                dist = distance(surfacepos,Positions[tri[j]]);
-                if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
-                    ftmp = (1.0 - dist/(mindist))/mindist;
-                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - com));
-                    ExtendVertex(tri[j],a0);
-                    if(Positions[tri[j]].x < com.x){
-                      Forces[tri[j]] *= 0.6;
-                    }
-                    Forces[tri[j]] *= Ks;
-                }
-                if(Positions[tri[j]].z < z){
-                    Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
-                }
-            }
-        }
-    }*/
-
     void Cell::StickToSurface(double z, double mindist){
         glm::dvec3 surfacepos,A,B,com = GetCOM();
         double dist,ftmp;
@@ -587,7 +582,6 @@ namespace DPM3D{
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/mindist;
                     Forces[tri[j]] += Ks*ftmp*glm::normalize(Positions[tri[j]] - com);
-                    //ExtendVertex(tri[j],a0);
                 }
                 if(Positions[tri[j]].z < z){
                     Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
@@ -596,43 +590,29 @@ namespace DPM3D{
         }
     }
 
-    void Cell::StickToSurface(double mindist){
-        glm::dvec3 A,B,com = GetCOM();
-        double dist,ftmp,disttmp;
-        std::vector<int> tri{0,0,0};
-        int ti,vi,si,siclosest;
+    void Cell::StickToSurface(DPM3D::ECM ECM, double mindist){
+      double dist,ftmp,disttmp;
+      std::vector<int> tri{0,0,0};
+      int vi,si,siclosest;
 
-        for(ti=0;ti<ntriangles;ti++){
-            tri = FaceIndices[ti];
-            A = Positions[tri[1]] - Positions[tri[0]];
-            B = Positions[tri[2]] - Positions[tri[0]];
-            for(vi=0;vi<3;vi++){
-                isFocalAdh[tri[vi]] = false;
-                dist = distance(surfacepositions[0],Positions[tri[vi]]);
-                siclosest = 0;
-                for(si=0;si<nsurfacep;si++){
-                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
-                    if(disttmp < dist){
-                        dist = disttmp;
-                        siclosest = si;
-                    }
-                }
-                if(Positions[tri[vi]].z < surfacepositions[0].z){
-                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
-                }
-                else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
-                    ftmp = Ks*(1.0 - dist/(mindist))/mindist;
-                    Forces[tri[vi]] += 0.5 * ftmp * (glm::normalize(surfacepositions[siclosest]- Positions[tri[vi]]));
-                    Forces[tri[vi]] += 0.5 * ftmp * (glm::normalize(Positions[tri[vi]]-com));
-                    isFocalAdh[tri[vi]] = true;
-                    //Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
-                }
-
-            }
+      for(vi=0;vi<NV;vi++){
+        siclosest = 0;
+        dist = r0;
+        for(si=0;si<ECM.NP;si++){
+          disttmp = distance(ECM.Positions[si],Positions[vi]);
+          if(disttmp < dist){
+            dist = disttmp;
+            siclosest = si;
+          }
         }
+        ftmp = (1.0-dist/(mindist))/mindist;
+        if(dist < mindist){
+          Forces[vi] += Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
+          ECM.Forces[siclosest] -= Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
+        }
+      }
     }
-
-
+    
     void Cell::StickToSurfaceSlip(double z, double mindist){
         glm::dvec3 surfacepos,A,B,com = GetCOM();
         double dist,ftmp;
@@ -659,32 +639,32 @@ namespace DPM3D{
         }
     }
 
-    void Cell::StickToSurfaceSlip(double mindist){
-        glm::dvec3 A,B,com = GetCOM();
+    void Cell::StickToSurfaceSlip(DPM3D::ECM ECM, double mindist){
         double dist,ftmp,disttmp;
         std::vector<int> tri{0,0,0};
         int ti,vi,si,siclosest;
 
         for(ti=0;ti<ntriangles;ti++){
             tri = FaceIndices[ti];
-            A = Positions[tri[1]] - Positions[tri[0]];
-            B = Positions[tri[2]] - Positions[tri[0]];
+            glm::dvec3 A = Positions[tri[1]] - Positions[tri[0]];
+            glm::dvec3 B = Positions[tri[2]] - Positions[tri[0]];
             for(vi=0;vi<3;vi++){
-                dist = distance(surfacepositions[0],Positions[tri[vi]]);
+                dist = distance(ECM.Positions[0],Positions[tri[vi]]);
                 siclosest = 0;
-                for(si=0;si<nsurfacep;si++){
-                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
+                for(si=0;si<ECM.NP;si++){
+                    disttmp = distance(ECM.Positions[si],Positions[tri[vi]]);
                     if(disttmp < dist){
                         dist = disttmp;
                         siclosest = si;
                     }
                 }
-                if(Positions[tri[vi]].z < surfacepositions[0].z){
-                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
+                if(Positions[tri[vi]].z < ECM.Positions[0].z){
+                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - ECM.Positions[0].z),2);
                 }
                 else if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
-                    ftmp = Ks*(1.0 - dist/(mindist))/dist; //slip bond
-                    Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
+                    ftmp = (1.0 - dist/(mindist))/dist; //slip bond
+                    Forces[tri[vi]] += Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
+                    ECM.Forces[siclosest] -= Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
                 }
             }
         }
@@ -715,8 +695,8 @@ namespace DPM3D{
         }
     }
 
-    void Cell::StickToSurfaceCatch(double mindist){
-                glm::dvec3 A,B,com = GetCOM();
+    void Cell::StickToSurfaceCatch(DPM3D::ECM ECM, double mindist){
+        glm::dvec3 A,B;
         double dist,ftmp,disttmp;
         std::vector<int> tri{0,0,0};
         int ti,vi,si,siclosest;
@@ -726,32 +706,33 @@ namespace DPM3D{
             A = Positions[tri[1]] - Positions[tri[0]];
             B = Positions[tri[2]] - Positions[tri[0]];
             for(vi=0;vi<3;vi++){
-                dist = distance(surfacepositions[0],Positions[tri[vi]]);
+                dist = distance(ECM.Positions[0],Positions[tri[vi]]);
                 siclosest = 0;
-                for(si=0;si<nsurfacep;si++){
-                    disttmp = distance(surfacepositions[si],Positions[tri[vi]]);
+                for(si=0;si<ECM.NP;si++){
+                    disttmp = distance(ECM.Positions[si],Positions[tri[vi]]);
                     if(disttmp < dist){
                         dist = disttmp;
                         siclosest = si;
                     }
                 }
-                if(Positions[tri[vi]].z < surfacepositions[0].z){
-                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - surfacepositions[0].z),2);
+                if(Positions[tri[vi]].z < ECM.Positions[0].z){
+                    Forces[tri[vi]].z += 10*pow((Positions[tri[vi]].z - ECM.Positions[0].z),2);
                 }
                 else if((A.x*B.y - A.y*B.x)< 0.0){
-                    ftmp = Ks*exp(-dist/mindist)*sin(mindist*(dist/mindist)); //catch bond
-                    Forces[tri[vi]] += 0.5*ftmp*(glm::normalize(surfacepositions[siclosest] - com));
+                    ftmp = exp(-dist/mindist)*sin(mindist*(dist/mindist)); //catch bond
+                    Forces[tri[vi]] += Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
+                    ECM.Forces[siclosest] -= Ks * 0.5 * ftmp * (glm::normalize(ECM.Positions[siclosest] - Positions[vi]));
                 }
             }
         }
     }
 
-    void Cell::RepelSurface(){
-        for(int i =0;i<NV;i++){
-            if(Positions[i].z < surfacepositions[0].z){
-                Forces[i].z += 10*pow((Positions[i].z - surfacepositions[0].z),2);
-            }
+    void Cell::RepelSurface(double z){
+      for(int vi=0;vi<NV;vi++){
+        if(Positions[vi].z < z){
+          Forces[vi].z += Ks*pow((Positions[vi].z - z),2);
         }
+      }
     }
 
 
@@ -760,50 +741,6 @@ namespace DPM3D{
         Forces[vi] += k*glm::normalize(Positions[vi]-center);
     }
 
-    void Cell::SetupSurface(int npoints){
-        nsurfacep = npoints;
-        glm::dvec3 surfacepos,com = GetCOM();
-        int lenp = (int)sqrt(nsurfacep);
-        int i,j;
-        double maxx=0.0, maxy=0.0;
-        double minz=Positions[0].z, miny=Positions[0].y,minx=Positions[0].x;
-        double distx,disty,dincx,dincy;
-        for(i=0;i<NV;i++){
-            if(Positions[i].x < minx){
-                minx = Positions[i].x;
-            }
-            if(Positions[i].y < miny){
-                miny = Positions[i].y;
-            }
-            if(Positions[i].z < minz){
-                minz = Positions[i].z;
-            }
-            if(Positions[i].x > maxx){
-                maxx = Positions[i].x;
-            }
-            if(Positions[i].y > maxy){
-                maxy = Positions[i].y;
-            }
-        }
-        distx = (maxx-minx)*5.0;
-        disty = (maxy-miny)*5.0;
-        dincx = distx/lenp;
-        dincy = disty/lenp;
-        for(i=0; i<lenp; i++){
-            for(j=0;j<lenp;j++){
-                surfacepos = glm::dvec3(((-distx/2)+(dincx*(double)i)),((-disty/2)+(dincy*(double)j)),minz);
-                surfacepos.x += com.x;
-                surfacepos.y += com.y;
-                surfacepositions.push_back(surfacepos);
-            }
-        }
-    }
-
-    void Cell::SurfaceStrech(double scale){
-        for (int i=0;i<(int)surfacepositions.size();i++){
-            surfacepositions[i].x *= 1+scale;
-        }
-    }
 
     double Cell::GetVolume(){
         int i,j;
@@ -996,10 +933,6 @@ namespace DPM3D{
         isJunction[index] = true;
       }
 
-    }
-
-    void Cell::FindFocalAdhesion(){
-      return;
     }
 
     //The following functions are for construction and vector maniplulations

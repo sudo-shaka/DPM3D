@@ -16,7 +16,7 @@
  * =====================================================================================
  */
 #include <ECM.hpp>
-#include <vector>
+#include <Cell3D.hpp>
 #include <glm/glm.hpp>
 #include <glm/vec3.hpp>
 #include <iostream>
@@ -55,5 +55,27 @@ namespace DPM3D{
 
     NP = Positions.size();
     std::cout << NP << std::endl;
+  }
+
+  ECM::ECM(){
+    Positions.resize(0);
+    Forces.resize(0);
+    NP = 0;
+  }
+
+  void ECM::StretchX(double scale){
+    for(int i=0; i < NP; i++){
+      Positions[i].x *= 1.0+scale;
+    }
+  }
+  void ECM::StretchY(double scale){
+    for(int i=0; i < NP; i++){
+      Positions[i].y *= 1.0+scale;
+    }
+  }
+  void ECM::StretchZ(double scale){
+    for(int i=0; i < NP; i++){
+      Positions[i].z *= 1.0+scale;
+    }
   }
 }

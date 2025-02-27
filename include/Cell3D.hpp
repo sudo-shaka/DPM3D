@@ -2,6 +2,7 @@
 #include <array>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
+#include "ECM.hpp"
 
 #ifndef __CELL3D__
 #define __CELL3D__
@@ -27,14 +28,17 @@ namespace DPM3D {
             std::vector<glm::dvec3> Velocities;
             std::vector<glm::dvec3> Forces;
             std::vector<std::vector<int>> FaceIndices;
-            std::vector<glm::dvec3> surfacepositions;
             std::vector<bool> isJunction;
             std::vector<bool> isFocalAdh;
-            int  nsurfacep;
 
             Cell(double x1,double y1, double z1,
                 double calA0,int f,double r0,
                 double Kv, double Ka,double Kb);
+
+            Cell(std::vector<double>X,
+                 std::vector<double>Y,
+                 std::vector<double>Z,
+                 std::vector<std::vector<int>> Triangles);
 
             void ResetForces();
             void AddFaceIndex(int a, int b, int c);
@@ -50,16 +54,15 @@ namespace DPM3D {
             void FindFocalAdhesion();
             void SurfaceGradient(double x, double mindist, double G);
             void StickToSurface(double x, double mindist);
-            void StickToSurface(double mindist);
-            void StickToSurfaceCatch(double mindist);
+            void StickToSurface(DPM3D::ECM ECM, double mindist);
             void StickToSurfaceCatch(double z, double mindist);
-            void StickToSurfaceSlip(double mindist);
+            void StickToSurfaceCatch(DPM3D::ECM ECM, double mindist);
             void StickToSurfaceSlip(double z, double mindist);
+            void StickToSurfaceSlip(DPM3D::ECM ECM, double mindist);
             void SetupSurface(int n);
-            void RepelSurface();
+            void RepelSurface(double z);
             void SurfaceStrech(double scale);
             void ExtendVertex(int vi, double force);
-            void Crawling();
             void EulerUpdate(int steps, double dt);
             void EulerUpdate(double dt);
             void FIREMinimization(double alpha, double dt, int itmax, double Ftol);

@@ -1,23 +1,8 @@
-/*
- * =====================================================================================
- *
- *       Filename:  ECM.hpp
- *
- *    Description: Extracellular Matrix
- *
- *        Version:  1.0
- *        Created:  09/01/2022 02:18:32 PM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  YOUR NAME (),
- *   Organization:
- *
- * =====================================================================================
- */
+#ifndef __ECM__
+#define __ECM__
 
-#include<vector>
 #include<glm/vec3.hpp>
+#include<vector>
 
 namespace DPM3D{
   struct ECM{
@@ -27,5 +12,12 @@ namespace DPM3D{
 
       ECM(std::vector<glm::dvec3> Points);
       ECM(double Z, double L, int NP);
+      ECM();
+
+      void StretchX(double scale);
+      void StretchY(double scale);
+      void StretchZ(double scale);
+
   };
 }
+#endif

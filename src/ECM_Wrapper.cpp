@@ -34,5 +34,8 @@ void init_ECM(py::module &m){
     .def_readwrite("Positions",&DPM3D::ECM::Positions)
     .def_readonly("Forces",&DPM3D::ECM::Forces)
     .def_readonly("NP",&DPM3D::ECM::NP)
+    .def("stretchX",py::overload_cast<double>(&DPM3D::ECM::StretchX),py::arg("scale"))
+    .def("stretchY",py::overload_cast<double>(&DPM3D::ECM::StretchY),py::arg("scale"))
+    .def("stretchZ",py::overload_cast<double>(&DPM3D::ECM::StretchZ),py::arg("scale"))
     ;
 }

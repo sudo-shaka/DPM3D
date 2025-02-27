@@ -1,4 +1,5 @@
-#include "../include/Cell3D.hpp"
+#include "Cell3D.hpp"
+#include "ECM.hpp"
 #include <pybind11/stl.h>
 #include <pybind11/pybind11.h>
 
@@ -27,6 +28,12 @@ void init_Cell(py::module &m){
     py::arg("Ka"),
     py::arg("Kb")
     )
+    .def(py::init<std::vector<double>,std::vector<double>,std::vector<double>,std::vector<std::vector<int>>>(),
+      py::arg("X"),
+      py::arg("Y"),
+      py::arg("Z"),
+      py::arg("FaceIdx")
+    )
     .def_readonly("NV",&DPM3D::Cell::NV)
     .def_readonly("isJunction",&DPM3D::Cell::isJunction)
     .def_readonly("isFocalAdhesion",&DPM3D::Cell::isFocalAdh)
@@ -36,12 +43,10 @@ void init_Cell(py::module &m){
     .def_readwrite("Ka",&DPM3D::Cell::Ka)
     .def_readwrite("Kl",&DPM3D::Cell::Kl)
     .def_readwrite("Kv",&DPM3D::Cell::Kb)
-    .def_readwrite("nSurfacePoints",&DPM3D::Cell::nsurfacep)
     .def_readwrite("Positions",&DPM3D::Cell::Positions)
     .def_readwrite("TriangleIndex",&DPM3D::Cell::FaceIndices)
     .def_readwrite("Velocities",&DPM3D::Cell::Velocities)
     .def_readwrite("Forces",&DPM3D::Cell::Forces)
-    .def_readwrite("SurfacePositions",&DPM3D::Cell::surfacepositions)
     .def_readwrite("Ks",&DPM3D::Cell::Ks)
     .def("ResetForces",&DPM3D::Cell::ResetForces)
     .def("UpdateShapeForces",&DPM3D::Cell::ShapeForceUpdate)
@@ -58,15 +63,13 @@ void init_Cell(py::module &m){
     .def("EulerUpdate",py::overload_cast<double>(&DPM3D::Cell::EulerUpdate),py::arg("dt"))
     .def("EulerUpdate",py::overload_cast<int,double>(&DPM3D::Cell::EulerUpdate),py::arg("nsteps"),py::arg("dt"))
     .def("StickToSurface",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurface),py::arg("minz"),py::arg("mindist"))
-    .def("StickToSurface",py::overload_cast<double>(&DPM3D::Cell::StickToSurface),py::arg("mindist"))
+    .def("StickToSurface",py::overload_cast<DPM3D::ECM,double>(&DPM3D::Cell::StickToSurface),py::arg("ECM"),py::arg("mindist"))
     .def("StickToSurfaceCatch",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurfaceCatch),py::arg("minz"),py::arg("mindistance"))
-    .def("StickToSurfaceCatch",py::overload_cast<double>(&DPM3D::Cell::StickToSurfaceCatch),py::arg("mindist"))
-    .def("StickToSurfaceSlip",py::overload_cast<double>(&DPM3D::Cell::StickToSurfaceSlip),py::arg("mindist"))
+    .def("StickToSurfaceCatch",py::overload_cast<DPM3D::ECM,double>(&DPM3D::Cell::StickToSurfaceCatch),py::arg("ECM"),py::arg("mindist"))
     .def("StickToSurfaceSlip",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurfaceSlip),py::arg("minz"),py::arg("mindist"))
+    .def("StickToSurfaceSlip",py::overload_cast<DPM3D::ECM,double>(&DPM3D::Cell::StickToSurfaceSlip),py::arg("ECM"),py::arg("mindist"))
     .def("SurfaceGradient",&DPM3D::Cell::SurfaceGradient)
-    .def("SurfaceInit",&DPM3D::Cell::SetupSurface)
     .def("RepelSurface",&DPM3D::Cell::RepelSurface)
-    .def("StretchSurface",py::overload_cast<double>(&DPM3D::Cell::SurfaceStrech),py::arg("scale"))
     .def("ExtendVertex",py::overload_cast<int,double>(&DPM3D::Cell::ExtendVertex),py::arg("vertexidx"),py::arg("Force"))
     .def("GetVolume",&DPM3D::Cell::GetVolume)
     .def("GetSA",&DPM3D::Cell::GetSurfaceArea)
