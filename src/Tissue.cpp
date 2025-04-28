@@ -230,14 +230,14 @@ namespace DPM3D{
             if(dist < mindist){
               mindist = dist;
               minrij = &rij;
-              }
             }
           }
-        if(minrij){
-          glm::dvec3 delta = *minrij;
-          double sij = sqrt(Cells[ci].v0);
-          double ftmp = Kat * (1.0-(mindist/sij)/sij);
-          Cells[ci].Forces[vi] -= Kat * ftmp * 0.5 * (delta/mindist);
+          if(minrij){
+            glm::dvec3 delta = *minrij;
+            //Cells[ci].Forces[vi] += delta * Kat * 0.5 * (pow(mindist,2));
+            if(mindist != 0)
+              Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
+          }
         }
       }
     }
@@ -286,7 +286,7 @@ namespace DPM3D{
           GeneralAttraction(ci);
         }
         else{
-          std::cerr << attactionMethod << " is not a valid attaction method\n" << 
+          std::cerr << attactionMethod << " is not a valid attaction method\n" <<
             "please use JunctionSlip, JunctionCatch, or General" << std::endl;
           exit(1);
         }

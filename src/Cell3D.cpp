@@ -111,7 +111,7 @@ namespace DPM3D{
         midpointCache.clear();
         midpointCache.shrink_to_fit();
     }
-    
+
     Cell::Cell(std::vector<double> X, std::vector<double> Y, std::vector<double> Z, std::vector<std::vector<int>> Faces){
         Kv = 0.0;
         Ka = 0.0;
@@ -155,14 +155,14 @@ namespace DPM3D{
         BendingForceUpdate();*/
     }
 
-    void Cell::EulerUpdate(int steps, double dt){
+    void Cell::EulerUpdate(const int steps, const double dt){
         for(int i=0; i<steps;i++){
           ShapeForceUpdate();
           EulerUpdate(dt);
         }
     }
 
-    void Cell::EulerUpdate(double dt){
+    void Cell::EulerUpdate(const double dt){
         for(int i=0;i<NV;i++){
             Velocities[i] = 0.5*Forces[i];
             Positions[i] += Forces[i]*dt;
@@ -311,7 +311,7 @@ namespace DPM3D{
       }
     }
     void Cell::AreaForceUpdate(){
-      if(Ka > 0.0001){
+      if(Ka > 0.0001){/*
         //double area,areaStrain;
         double length[3],dli[3],dlim1[3],l0 = sqrt((4*a0)/sqrt(3));
         int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
@@ -336,6 +336,24 @@ namespace DPM3D{
             for(j=0;j<3;j++){
                 Forces[tri[j]] += (Ka*(sqrt(a0)/l0)) * (dli[j]*ulv[j]-dlim1[j]*ulv[im1[j]]);
             }
+        }*/
+        double l0 = sqrt((4*a0)/sqrt(3));
+        for(const auto& tri : FaceIndices){
+          glm::dvec3 pos0 = Positions[tri[0]];
+          glm::dvec3 pos1 = Positions[tri[1]];
+          glm::dvec3 pos2 = Positions[tri[2]];
+          glm::dvec3 lv0 = pos1 - pos0;
+          glm::dvec3 lv1 = pos2 - pos1;
+          glm::dvec3 lv2 = pos0 - pos2;
+          glm::dvec3 lengths = {distance(pos1,pos0),distance(pos2,pos1),distance(pos0,pos2)};
+          glm::dvec3 ulv0 = lv0/lengths[0];
+          glm::dvec3 ulv1 = lv1/lengths[1];
+          glm::dvec3 ulv2 = lv2/lengths[2];
+          glm::dvec3 dli = {lengths[0]/l0,lengths[1]/l0,lengths[2]/l0};
+          dli -= 1.0;
+          Forces[tri[0]] += Ka * sqrt(a0)/l0 * (dli[0]*ulv0 - dli[2]*ulv2);
+          Forces[tri[1]] += Ka * sqrt(a0)/l0 * (dli[1]*ulv1 - dli[0]*ulv0);
+          Forces[tri[2]] += Ka * sqrt(a0)/l0 * (dli[2]*ulv2 - dli[1]*ulv1);
         }
       }
     }
@@ -612,7 +630,7 @@ namespace DPM3D{
         }
       }
     }
-    
+
     void Cell::StickToSurfaceSlip(double z, double mindist){
         glm::dvec3 surfacepos,A,B,com = GetCOM();
         double dist,ftmp;
@@ -743,26 +761,12 @@ namespace DPM3D{
 
 
     double Cell::GetVolume(){
-        int i,j;
-        double det,volume=0.0;
-        std::vector<int> tri{0,0,0};
-        std::vector<glm::dvec3> positions;
-        glm::dmat3 mat;
-        glm::dvec3 center = GetCOM();
-        for(i=0;i<ntriangles;i++){
-            tri = FaceIndices[i];
-            positions.clear();
-            for(j=0;j<3;j++){
-                positions.push_back(Positions[tri[j]]-center);
-            }
-            mat = glm::dmat3(positions[0],positions[1],positions[2]);
-            det = glm::determinant(mat);
-            if(det < 0.0)
-                det *= -1;
-            volume += det;
-        }
-        volume /= 6;
-        return volume;
+      double volume = 0.0;
+      for(const auto& tri : FaceIndices){
+        glm::dvec3 crossProd = glm::cross(Positions[tri[1]],Positions[tri[2]]);
+        volume += glm::dot(Positions[tri[0]],crossProd);
+      }
+      return std::abs(volume)/6;
     }
 
     double Cell::GetSurfaceArea(){
@@ -897,7 +901,7 @@ namespace DPM3D{
       //find the lowest point
       auto minIt = std::min_element(projected.begin(), projected.end(),
           [](const auto& a, const auto& b){
-           return a.first.x < b.first.y || (a.first.y == b.first.y && a.first.x < b.first.x); 
+           return a.first.x < b.first.y || (a.first.y == b.first.y && a.first.x < b.first.x);
           });
 
       std::swap(projected[0],*minIt);
