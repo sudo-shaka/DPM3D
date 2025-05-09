@@ -1,5 +1,6 @@
 #include <vector>
 #include <array>
+#include <array>
 #include <glm/vec3.hpp>
 #include <glm/vec2.hpp>
 #include "ECM.hpp"
@@ -76,6 +77,8 @@ namespace DPM3D {
             static std::vector<glm::dvec3> GetVolumeForces(DPM3D::Cell Cell);
             static std::vector<glm::dvec3> GetAreaForces(DPM3D::Cell Cell);
             static std::vector<glm::dvec3> GetBendingForces(DPM3D::Cell Cell);
+            std::array<std::vector<double>,3> GetPositions();
+            std::array<std::vector<double>,3> GetForces();
     };
 
     glm::dvec3 GetMiddlePoint(glm::dvec3 a, glm::dvec3 b);

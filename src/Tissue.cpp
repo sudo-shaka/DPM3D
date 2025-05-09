@@ -1,3 +1,4 @@
+#include <glm/geometric.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <cassert>
 #include <cmath>
@@ -210,6 +211,7 @@ namespace DPM3D{
 
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
+      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
       for(int vi=0;vi<Cells[ci].NV;ci++){
         glm::dvec3 *minrij = NULL;
         double mindist=Cells[ci].r0*2;
@@ -236,7 +238,8 @@ namespace DPM3D{
             glm::dvec3 delta = *minrij;
             //Cells[ci].Forces[vi] += delta * Kat * 0.5 * (pow(mindist,2));
             if(mindist != 0)
-              Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
+              Cells[ci].Forces[vi] -= glm::normalize(delta) * Kat * (1.0-mindist)/l0;
+              //Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
           }
         }
       }

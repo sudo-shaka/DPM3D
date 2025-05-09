@@ -56,6 +56,8 @@ void init_Cell(py::module &m){
     .def("GetShapeForces",&DPM3D::Cell::GetShapeForces)
     .def("GetVolumeForces",&DPM3D::Cell::GetVolumeForces)
     .def("GetAreaForces",&DPM3D::Cell::GetAreaForces)
+    .def("GetPositions",&DPM3D::Cell::GetPositions)
+    .def("GetForces",&DPM3D::Cell::GetForces)
     .def("GetBendingForces",&DPM3D::Cell::GetBendingForces)
     .def("FindJunctions",&DPM3D::Cell::FindJunctions)
     .def("GetJunctionPositions",&DPM3D::Cell::getJunctionPoints)

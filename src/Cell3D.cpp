@@ -835,6 +835,34 @@ namespace DPM3D{
         return (n_crosses % 2 != 0);
     }
 
+    std::array<std::vector<double>,3> Cell::GetPositions(){
+      std::array<std::vector<double>,3> OutPositions;
+      std::vector<double> x,y,z;
+      x.resize(NV); y.resize(NV); z.resize(NV);
+
+      for(int vi=0;vi<NV;vi++){
+        x[vi] = Positions[vi].x;
+        y[vi] = Positions[vi].y;
+        z[vi] = Positions[vi].z;
+      }
+      OutPositions[0] = x;
+      OutPositions[1] = y;
+      OutPositions[2] = z;
+      return OutPositions;
+    }
+
+    std::array<std::vector<double>,3> Cell::GetForces(){
+      std::array<std::vector<double>,3> OutForces;
+      std::vector<double> x,y,z;
+      x.resize(NV); y.resize(NV); z.resize(NV);
+      for(int vi=0;vi<NV;vi++){
+        x[vi] = Forces[vi].x;
+        y[vi] = Forces[vi].y;
+        z[vi] = Forces[vi].z;
+      }
+      return OutForces;
+    }
+
     std::array<std::vector<double>,2> Cell::getJunctionPoints(){
       std::array<std::vector<double>,2> points;
       std::vector<glm::dvec2> points2D;

@@ -33,40 +33,10 @@ def plottissue(Tissue):
     for ci in range(Tissue.NCELLS):
         Cell = Tissue.Cells[ci];
         for tri in Cell.TriangleIndex:
-            x = [Cell.Positions[i].x for i in tri]
-            y = [Cell.Positions[i].y for i in tri]
-            z = [Cell.Positions[i].z for i in tri]
-            plot = True
-            for i in range(3):
-                if x[i] < 0:
-                    x[i] += Tissue.L*(round(abs(x[i]/Tissue.L))+1)
-                    plot = False
-                if y[i] < 0:
-                    y[i] += Tissue.L*(round(abs(y[i]/Tissue.L))+1)
-                    plot = False
-                if z[i] < 0:
-                    z[i] += Tissue.L
-                    plot = False
-                if x[i] > Tissue.L:
-                    x[i] -= Tissue.L * ceil((x[i]-Tissue.L)/Tissue.L)
-                    plot = False
-                if y[i] > Tissue.L:
-                    y[i] -= Tissue.L * ceil((y[i]-Tissue.L)/Tissue.L)
-                    plot = False
-                if z[i] > Tissue.L:
-                    z[i] -= Tissue.L * ceil((z[i]-Tissue.L)/Tissue.L)
-                    plot = False
-
-            xt = sorted(x);yt = sorted(y);zt = sorted(z)
-            if plot == False:
-                if (abs(xt[0] - xt[-1])**2 + abs(yt[0] - yt[-1])**2 + abs(zt[0] - zt[-1])**2) < Tissue.L:
-                    plot = True
-            ax.set_xlim(0,Tissue.L);
-            ax.set_ylim(0,Tissue.L);
-            ax.set_zlim(0,Tissue.L);
-            if plot:
-                ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]),animated=True)
-
+            x = np.mod([Cell.Positions[i].x for i in tri],Tissue.L)
+            y = np.mod([Cell.Positions[i].y for i in tri],Tissue.L)
+            z = np.mod([Cell.Positions[i].z for i in tri],Tissue.L)
+            ax.plot(x,y,z,color=(r1[ci],r2[ci],r3[ci]),animated=True)
 
 def  MapToCylinder(point, radius, scale):
     theta = point.x * scale;
@@ -111,6 +81,17 @@ def plotVessel(Tissue):
                 x,y,z = MapToCylinder(p,radius,scale)
                 ax.scatter(x,y,z, color=(r1[ci],r2[ci],r3[ci]),animated=True)
 
+def plotjunction2D(Tissue):
+    plt.figure(figsize=(10,10))
+    for ci in range(Tissue.NCELLS):
+        cell = Tissue.Cells[ci]
+        for tri in cell.TriangleIndex:
+            isJunction = [cell.isJunction[i] for i in tri]
+            for i in range(3):
+                if isJunction[i]:
+                    f = abs(cell.Forces[tri[i]].x) + abs(cell.Forces[tri[i]].y) + abs(cell.Forces[tri[i]].z)
+                    plt.scatter(np.mod(cell.Positions[tri[i]].x,Tissue.L),np.mod(cell.Positions[tri[i]].y,Tissue.L),c=f,cmap = 'coolwarm')
+
 
 def plottissue2D(Tissue):
     plt.figure(figsize=(10,10))
@@ -119,41 +100,13 @@ def plottissue2D(Tissue):
     r2 = random.rand(Tissue.NCELLS)
     r3 = random.rand(Tissue.NCELLS)
     for ci in range(Tissue.NCELLS):
-        Cell = Tissue.Cells[ci];
-        for tri in Cell.TriangleIndex:
-            x = [Cell.Positions[i].x for i in tri]
-            y = [Cell.Positions[i].y for i in tri]
-            j = [Cell.isJunction[i] for i in tri]
-            a = [Cell.isFocalAdhesion[i] for i in tri]
-            plot = True
-            for i in range(3):
-                if x[i] < 0:
-                    x[i] += Tissue.L*(round(abs(x[i]/Tissue.L))+1)
-                    plot = False
-                if y[i] < 0:
-                    y[i] += Tissue.L*(round(abs(y[i]/Tissue.L))+1)
-                    plot = False
-                    plot = False
-                if x[i] > Tissue.L:
-                    x[i] -= Tissue.L * ceil((x[i]-Tissue.L)/Tissue.L)
-                    plot = False
-                if y[i] > Tissue.L:
-                    y[i] -= Tissue.L * ceil((y[i]-Tissue.L)/Tissue.L)
-                    plot = False
-                if j[i]:
-                    plt.scatter(x[i],y[i], color='black',animated=True)
-                elif a[i]:
-                    plt.scatter(x[i],y[i], color='red',animated=True)
-                else:
-                    plt.scatter(x[i],y[i], color=(r1[ci],r2[ci],r2[ci]),animated=True)
-
-            xt = sorted(x);yt = sorted(y)
-            if plot == False:
-                if (abs(xt[0] - xt[-1])**2 + abs(yt[0] - yt[-1])**2) < Tissue.L:
-                    plot = True
-            if plot:
-                plt.plot(x,y,color=(r1[ci],r2[ci],r3[ci]),animated=True)
-            plt.xlim([0,Tissue.L])
-            plt.ylim([0,Tissue.L])
-    del x,y,plot,xt,yt
-    gc.collect()
+        pos = Tissue.Cells[ci].GetPositions()
+        x,y = np.mod(pos[0],Tissue.L), np.mod(pos[1],Tissue.L)
+        for tri in Tissue.Cells[ci].TriangleIndex:
+            vx,vy = [x[i] for i in tri], [y[i] for i in tri]
+            if max(vx) - min(vx) <= Tissue.L/2 and max(vy) - min(vy) <= Tissue.L/2:
+                plt.plot(vx,vy, color = (r1[ci],r2[ci],r3[ci]))
+            plt.scatter(x,y,s=3, color = (r1[ci],r2[ci],r3[ci]))
+    plt.axis('equal')
+    plt.xlim([0,Tissue.L])
+    plt.ylim([0,Tissue.L])
