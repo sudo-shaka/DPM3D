@@ -48,6 +48,7 @@ void init_Cell(py::module &m){
     .def_readwrite("Velocities",&DPM3D::Cell::Velocities)
     .def_readwrite("Forces",&DPM3D::Cell::Forces)
     .def_readwrite("Ks",&DPM3D::Cell::Ks)
+    .def_readwrite("l0",&DPM3D::Cell::l0)
     .def("ResetForces",&DPM3D::Cell::ResetForces)
     .def("UpdateShapeForces",&DPM3D::Cell::ShapeForceUpdate)
     .def("UpdateSurfaceAreaForce",&DPM3D::Cell::AreaForceUpdate)

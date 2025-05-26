@@ -188,7 +188,7 @@ namespace DPM3D{
 
     void Tissue::JunctionSlipForceUpdate(int ci){
       UpdateJunctions();
-      double dist, l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      double dist, l0 = Cells[ci].l0;
       for(int vi = 0;vi < Cells[ci].NV; vi++){
         if(Cells[ci].isJunction[vi]){
           for(int cj = 0; cj < NCELLS; cj++){
@@ -211,7 +211,7 @@ namespace DPM3D{
 
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
-      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      double l0 = Cells[ci].l0;
       for(int vi=0;vi<Cells[ci].NV;ci++){
         glm::dvec3 *minrij = NULL;
         double mindist=Cells[ci].r0*2;
@@ -247,7 +247,7 @@ namespace DPM3D{
 
     void Tissue::GeneralAttraction(int ci){
       double dist;
-      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      double l0 = Cells[ci].l0;
 //      glm::dvec3 com = Cells[ci].GetCOM();
       for(int vi=0; vi < Cells[ci].NV; vi++){
         for(int cj=0;cj<NCELLS;cj++){
@@ -274,7 +274,7 @@ namespace DPM3D{
       int fi,cj,fj,NT = Cells[ci].ntriangles;
       glm::dmat3 PI, PJ;
       glm::dvec3 rij, normali, normalj, FaceCenterI, FaceCenterJ;
-      double l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+      double l0 = Cells[ci].l0;
       double dist;
       glm::dvec3 com = Cells[ci].GetCOM();
 
@@ -399,7 +399,7 @@ namespace DPM3D{
         ECM.Forces[pi] *= 0.0;
         for(ci=0;ci<NCELLS;ci++){
           COM = Cells[ci].GetCOM();
-          l0 = sqrt((4*Cells[ci].a0)/sqrt(3));
+          l0 = Cells[ci].l0;
           for(vi=0;vi<Cells[ci].NV;vi++){
             dist = distance(Cells[ci].Positions[vi],ECM.Positions[pi]);
             if(dist < l0 && distance(ECM.Positions[pi],COM) > distance(Cells[ci].Positions[vi],COM)){

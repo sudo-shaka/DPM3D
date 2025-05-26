@@ -17,6 +17,7 @@ namespace DPM3D {
             double r0;
             double a0;
             double s0;
+            double l0;
             double U;
             double Kv;
             double Ka;
