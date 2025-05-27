@@ -274,13 +274,6 @@ namespace DPM3D{
 
     void Tissue::CellInteractingUpdate(int ci){
       std::vector<int> tri{0,0,0}, trij{0,0,0};
-      int fi,cj,fj,NT = Cells[ci].ntriangles;
-      glm::dmat3 PI, PJ;
-      glm::dvec3 normali, normalj, FaceCenterI, FaceCenterJ;
-      double l0 = Cells[ci].l0;
-      double dist;
-      glm::dvec3 com = Cells[ci].GetCOM();
-
       if(Kat != 0){
         if(attactionMethod == "JunctionSlip"){
           JunctionSlipForceUpdate(ci);
@@ -297,38 +290,7 @@ namespace DPM3D{
           exit(1);
         }
       }
-
-     
-      //oldway
-      /*std::vector<bool> overlaps;
-      for(int cj=0;cj<NCELLS;cj++){
-        if(ci!=cj){
-          overlaps = FindOverlaps(ci, cj);
-          for(int vi=0;vi<Cells[ci].NV;vi++){
-            if(overlaps[vi]){
-              glm::dvec3 delta = Cells[ci].Positions[vi] = com;
-              delta -= L*round(delta/L);
-              double rij = sqrt(glm::dot(delta,delta));
-              double ftmp = Kre*((1.0-rij)/Cells[ci].r0);
-              Cells[ci].Forces[vi] -= ftmp * glm::normalize(com-Cells[ci].Positions[vi]);
-            }
-          }
-        }
-      }*/
-
-      //Repulsive Faces
-      /*
-      for(int cj=0; cj < NCELLS;cj++){
-        if(ci != cj){
-          for(int vj=0;vj<Cells[cj].NV;vj++){
-            bool inside = Cells[ci].pointInside(Cells[cj].Positions[vj]);
-            if(inside)
-              Cells[cj].Forces[vj] += 0.5 * Kre * (Cells[cj].GetCOM() - Cells[cj].Positions[vj]);
-          }
-        }
-      }
-      */
-
+       //prevent overlapping    
       for(int cj=0; cj < NCELLS;cj++){
         std::vector<bool> overlaps = FindOverlaps(ci, cj);
         for(int vi=0;vi<Cells[ci].NV;vi++){
@@ -336,40 +298,6 @@ namespace DPM3D{
             Cells[ci].Forces[vi] += 0.5 * Kre * (Cells[ci].GetCOM() - Cells[ci].Positions[vi]);
         }
       }
-
-
-
-      /*for(fi=0;fi<NT;fi++){
-        tri = Cells[ci].FaceIndices[fi];
-        PI[0] = Cells[ci].Positions[tri[0]];
-        PI[1] = Cells[ci].Positions[tri[1]];
-        PI[2] = Cells[ci].Positions[tri[2]];
-        normali = glm::cross((PI[1]-PI[0]),(PI[2]-PI[0]));
-        FaceCenterI = (PI[0]+PI[1]+PI[2])/3.0;
-        for(cj=0;cj<NCELLS;cj++){
-          if(cj != ci){
-            for(fj=0;fj<Cells[cj].ntriangles;fj++){
-              trij = Cells[cj].FaceIndices[fj];
-              PJ[0] = Cells[cj].Positions[trij[0]];
-              PJ[1] = Cells[cj].Positions[trij[1]];
-              PJ[2] = Cells[cj].Positions[trij[2]];
-              FaceCenterJ = (PJ[0]+PJ[1]+PJ[2])/3.0;
-              rij = FaceCenterJ - FaceCenterI;
-              if(PBC){
-                rij -= L*round(rij/L);
-              }
-              dist = sqrt(glm::dot(rij,rij));
-              normalj = glm::cross((PJ[1]-PJ[0]),(PJ[2]-PJ[0]));
-              if(glm::dot(normali,rij) < 0.0 && dist < l0){
-                Cells[ci].Forces[tri[0]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[0]]);
-                Cells[ci].Forces[tri[1]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[1]]);
-                Cells[ci].Forces[tri[2]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[2]]);
-              }
-            }
-          }
-        }
-      }
-      */
     }
 
     void Tissue::UpdateShapeForces(){
