@@ -1,4 +1,6 @@
+#include <glm/geometric.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
+#include "Cell3D.hpp"
 #include <cmath>
 #include <Cell3D.hpp>
 #include <vector>
@@ -795,7 +797,7 @@ namespace DPM3D{
     double Cell::GetCalA0(){
         double s = GetSurfaceArea();
         double v = GetVolume();
-        return (pow(s,3/2))/(6*sqrt(M_PI)*v);
+        return (pow(s,3.0/2.0))/(6*sqrt(M_PI)*v);
     }
 
     glm::dvec3 Cell::GetCOM(){
@@ -808,32 +810,55 @@ namespace DPM3D{
     }
 
     bool Cell::pointInside(glm::dvec3 point){
-        std::vector<int> tri;
-        double det, inv_det,u,v;
-        glm::dvec3 dir,edge1,edge2,tvec,pvec,qvec;
-        int n_crosses = 0;
-        dir = glm::normalize(point-GetCOM());
-        for(int i=0;i<ntriangles;i++){
-            tri = FaceIndices[i];
-            edge1 = Positions[tri[1]] - Positions[tri[0]];
-            edge2 = Positions[tri[2]] - Positions[tri[0]];
-            pvec = glm::cross(dir,edge2);
-            det = glm::dot(edge1,pvec);
-            inv_det = 1.0/det;
-            tvec = point - Positions[tri[0]];
-            u = glm::dot(tvec,pvec);
-            if(u<0 || u > 1.0 || u*inv_det <0 || u*inv_det > 1.0){
-                continue;
-            }
-            qvec = glm::cross(tvec,edge1);
-            v = glm::dot(dir,qvec);
-            if(v < 0.0 || u+v > 1.0 || v*inv_det < 0.0 || (u*inv_det)+(v*inv_det) >1.0)
-            {
-                continue;
-            }
-            n_crosses++;
-        }
-        return (n_crosses % 2 != 0);
+      //glm::dvec3 direction = glm::normalize(GetCOM()-point);
+      /*glm::dvec3 direction(0.0,1.0,0.0);
+      int n_crosses = 0;
+      for(int i=0;i<ntriangles;i++){
+        std::vector<int>& tri = FaceIndices[i];
+        glm::dvec3 v0 = Positions[tri[0]];
+        glm::dvec3 v1 = Positions[tri[1]];
+        glm::dvec3 v2 = Positions[tri[2]];
+
+        glm::dvec3 edge1 = v1-v0;
+        glm::dvec3 edge2 = v2-v0;
+
+        glm::dvec3 pvec = glm::cross(direction,edge2);
+        double det = glm::dot(edge1,pvec);
+        double inv_det = 1.0/det;
+
+        glm::dvec3 tvec = point - v0;
+        double u = glm::dot(tvec,pvec) * inv_det;
+        if(u < 0.0 || u > 1.0) continue;
+        glm::dvec3 qvec = glm::cross(tvec,edge1);
+        double v = glm::dot(direction,qvec) * inv_det;
+        if(v < 0.0 || (u+v) > 1.0) continue;
+
+        n_crosses++;
+      }
+      return (n_crosses % 2 != 0);
+
+      */
+
+      //solid angle method:
+      double totalOmega = 0.0;
+      for(const auto& tri : FaceIndices){
+        glm::dvec3 a = Positions[tri[0]] - point;
+        glm::dvec3 b = Positions[tri[1]] - point;
+        glm::dvec3 c = Positions[tri[2]] - point;
+        
+        glm::dvec3 u = glm::normalize(a);
+        glm::dvec3 v = glm::normalize(b);
+        glm::dvec3 w = glm::normalize(c);
+
+        double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
+        double num = glm::dot(u,glm::cross(v,w));
+        
+        double omega = 2.0*atan2(num,denom);
+        totalOmega += omega;
+      }
+
+      double windingNumber = totalOmega / (4.0 * M_PI);
+      return windingNumber > 0.5;
     }
 
     std::array<std::vector<double>,3> Cell::GetPositions(){

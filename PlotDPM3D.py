@@ -1,7 +1,6 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from numpy import random, ceil
-import gc
+from numpy import random
 
 def PlotECM(ECM,fig):
   ax = fig.add_subplot(projection='3d')
@@ -107,6 +106,5 @@ def plottissue2D(Tissue):
             if max(vx) - min(vx) <= Tissue.L/2 and max(vy) - min(vy) <= Tissue.L/2:
                 plt.plot(vx,vy, color = (r1[ci],r2[ci],r3[ci]))
             plt.scatter(x,y,s=3, color = (r1[ci],r2[ci],r3[ci]))
-    plt.axis('equal')
     plt.xlim([0,Tissue.L])
     plt.ylim([0,Tissue.L])

@@ -1,8 +1,8 @@
-#include <glm/geometric.hpp>
+#include <math.h>
 #define GLM_ENABLE_EXPERIMENTAL
-#include <cassert>
-#include <cmath>
 #include "Tissue.hpp"
+#include <glm/geometric.hpp>
+#include <cmath>
 #include <vector>
 #include <array>
 #include <string>
@@ -199,7 +199,8 @@ namespace DPM3D{
                   if(PBC){rij-= L*round(rij/L);}
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
-                      Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) * (rij/dist);
+                    Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
+                      glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
                   }
                 }
               }
@@ -211,21 +212,14 @@ namespace DPM3D{
 
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
-      double l0 = Cells[ci].l0;
       for(int vi=0;vi<Cells[ci].NV;ci++){
         glm::dvec3 *minrij = NULL;
         double mindist=Cells[ci].r0*2;
-        if(!Cells[ci].isJunction[vi]){
-          continue;
-        }
+        if(Cells[ci].isJunction[vi]){
         for(int cj=0;cj<NCELLS;cj++){
-          if(ci == cj){
-            continue;
-          }
+          if(ci != cj){
           for(int vj=0;vj<Cells[cj].NV;vj++){
-            if(!Cells[cj].isJunction[vj]){
-              continue;
-            }
+            if(Cells[cj].isJunction[vj]){
             glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
             if(PBC){rij -= L*round(rij/L);};
             double dist = sqrt(dot(rij,rij));
@@ -236,11 +230,20 @@ namespace DPM3D{
           }
           if(minrij){
             glm::dvec3 delta = *minrij;
+            /*
             //Cells[ci].Forces[vi] += delta * Kat * 0.5 * (pow(mindist,2));
             if(mindist != 0)
               Cells[ci].Forces[vi] -= glm::normalize(delta) * Kat * (1.0-mindist)/l0;
               //Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
+              */
+            double sij = sqrt(Cells[ci].a0);
+            double xij = mindist/sij;
+            double ftmp = Kat*(1.0-xij)/sij;
+            Cells[ci].Forces[vi] -= ftmp * normalize(delta);
           }
+        }
+          }
+        }
         }
       }
     }
@@ -273,7 +276,7 @@ namespace DPM3D{
       std::vector<int> tri{0,0,0}, trij{0,0,0};
       int fi,cj,fj,NT = Cells[ci].ntriangles;
       glm::dmat3 PI, PJ;
-      glm::dvec3 rij, normali, normalj, FaceCenterI, FaceCenterJ;
+      glm::dvec3 normali, normalj, FaceCenterI, FaceCenterJ;
       double l0 = Cells[ci].l0;
       double dist;
       glm::dvec3 com = Cells[ci].GetCOM();
@@ -295,8 +298,48 @@ namespace DPM3D{
         }
       }
 
+     
+      //oldway
+      /*std::vector<bool> overlaps;
+      for(int cj=0;cj<NCELLS;cj++){
+        if(ci!=cj){
+          overlaps = FindOverlaps(ci, cj);
+          for(int vi=0;vi<Cells[ci].NV;vi++){
+            if(overlaps[vi]){
+              glm::dvec3 delta = Cells[ci].Positions[vi] = com;
+              delta -= L*round(delta/L);
+              double rij = sqrt(glm::dot(delta,delta));
+              double ftmp = Kre*((1.0-rij)/Cells[ci].r0);
+              Cells[ci].Forces[vi] -= ftmp * glm::normalize(com-Cells[ci].Positions[vi]);
+            }
+          }
+        }
+      }*/
+
       //Repulsive Faces
-      for(fi=0;fi<NT;fi++){
+      /*
+      for(int cj=0; cj < NCELLS;cj++){
+        if(ci != cj){
+          for(int vj=0;vj<Cells[cj].NV;vj++){
+            bool inside = Cells[ci].pointInside(Cells[cj].Positions[vj]);
+            if(inside)
+              Cells[cj].Forces[vj] += 0.5 * Kre * (Cells[cj].GetCOM() - Cells[cj].Positions[vj]);
+          }
+        }
+      }
+      */
+
+      for(int cj=0; cj < NCELLS;cj++){
+        std::vector<bool> overlaps = FindOverlaps(ci, cj);
+        for(int vi=0;vi<Cells[ci].NV;vi++){
+          if(overlaps[vi])
+            Cells[ci].Forces[vi] += 0.5 * Kre * (Cells[ci].GetCOM() - Cells[ci].Positions[vi]);
+        }
+      }
+
+
+
+      /*for(fi=0;fi<NT;fi++){
         tri = Cells[ci].FaceIndices[fi];
         PI[0] = Cells[ci].Positions[tri[0]];
         PI[1] = Cells[ci].Positions[tri[1]];
@@ -318,14 +361,15 @@ namespace DPM3D{
               dist = sqrt(glm::dot(rij,rij));
               normalj = glm::cross((PJ[1]-PJ[0]),(PJ[2]-PJ[0]));
               if(glm::dot(normali,rij) < 0.0 && dist < l0){
-                Cells[ci].Forces[tri[0]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[0]]);
-                Cells[ci].Forces[tri[1]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[1]]);
-                Cells[ci].Forces[tri[2]] += dist*0.5*Kre*glm::normalize(com-Cells[ci].Positions[tri[2]]);
+                Cells[ci].Forces[tri[0]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[0]]);
+                Cells[ci].Forces[tri[1]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[1]]);
+                Cells[ci].Forces[tri[2]] += dist*0.3*Kre*glm::normalize(com-Cells[ci].Positions[tri[2]]);
               }
             }
           }
         }
       }
+      */
     }
 
     void Tissue::UpdateShapeForces(){
@@ -419,8 +463,40 @@ namespace DPM3D{
     }
 
     std::vector<bool> Tissue::FindOverlaps(int ci, int cj){
-        std::vector<bool> overlaps;
-        glm::dvec3 point, com = Cells[cj].GetCOM();
+      std::vector<bool> overlaps(Cells[ci].NV,false); 
+      for(int vi = 0; vi < Cells[ci].NV; vi++){
+        glm::dvec3 point = Cells[ci].Positions[vi];
+        double totalOmega = 0.0;
+        for(const auto& tri : Cells[cj].FaceIndices){
+          glm::dvec3 a = Cells[cj].Positions[tri[0]] - point;
+          glm::dvec3 b = Cells[cj].Positions[tri[1]] - point;
+          glm::dvec3 c = Cells[cj].Positions[tri[2]] - point;
+          glm::dvec3 u,v,w;
+          if(PBC){
+             u = glm::normalize(a - L * glm::round(a / L));
+             v = glm::normalize(b - L * glm::round(b / L));
+             w = glm::normalize(c - L * glm::round(c / L));
+          }
+          else{
+            u = glm::normalize(a);
+            v = glm::normalize(b);
+            w = glm::normalize(c);
+          }
+          double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
+          double num = glm::dot(u,glm::cross(v,w));
+
+          double omega = 2.0 * atan2(num,denom);
+          totalOmega += omega;
+        }
+
+        double windingNumber = totalOmega / (4.0 * M_PI);
+        overlaps[vi] = windingNumber > 0.5;
+      }
+      return overlaps;
+    }
+ /*       std::vector<bool> overlaps;
+        glm::dvec3 point;
+        glm::dvec3 com = Cells[cj].GetCOM();
         overlaps.resize(Cells[ci].NV);
         for(int vi = 0; vi < Cells[ci].NV; vi++){
             point = Cells[ci].Positions[vi];
@@ -432,6 +508,7 @@ namespace DPM3D{
         }
         return overlaps;
     }
+    */
 
     std::vector<std::vector<double>> Tissue::GetVesselPosition(int ci){
       std::vector<std::vector<double>> vesselPosition;
