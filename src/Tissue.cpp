@@ -188,6 +188,7 @@ namespace DPM3D{
 
     void Tissue::JunctionSlipForceUpdate(int ci){
       UpdateJunctions();
+      double f0 = 1.0; //charateristic force scale for bond behavoir
       double dist, l0 = Cells[ci].l0;
       for(int vi = 0;vi < Cells[ci].NV; vi++){
         if(Cells[ci].isJunction[vi]){
@@ -199,8 +200,12 @@ namespace DPM3D{
                   if(PBC){rij-= L*round(rij/L);}
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
-                    Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
-                      glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
+                    //Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
+                      //glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
+                    double ftmp = dist/l0 * Kat;
+                    double lifetime = std::exp(std::abs(ftmp)/f0);
+                    ftmp /= lifetime;
+                    Cells[ci].Forces[vi] += 0.5 * ftmp * glm::normalize(Cells[cj].Positions[vj] - Cells[ci].Positions[vi]);
                   }
                 }
               }
@@ -209,7 +214,34 @@ namespace DPM3D{
         }
       }
     }
-
+    
+    void Tissue::JunctionCatchForceUpdate(int ci){
+      UpdateJunctions();
+      double f0 = 1.0; //charateristic force scale for bond behavoir
+      double dist, l0 = Cells[ci].l0;
+      for(int vi = 0;vi < Cells[ci].NV; vi++){
+        if(Cells[ci].isJunction[vi]){
+          for(int cj = 0; cj < NCELLS; cj++){
+            if(ci != cj){
+              for(int vj=0;vj<Cells[cj].NV;vj++){
+                if(Cells[cj].isJunction[vj]){
+                  glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
+                  if(PBC){rij-= L*round(rij/L);}
+                  dist = sqrt(dot(rij,rij));
+                  if(dist < l0){
+                    double ftmp = dist/l0 * Kat;
+                    double lifetime = std::exp(-std::abs(ftmp)/f0) + 0.5 * std::exp(-std::pow((std::abs(ftmp)-f0)/f0,2));
+                    ftmp /= lifetime;
+                    Cells[ci].Forces[vi] += 0.5 * ftmp * glm::normalize(Cells[cj].Positions[vj] - Cells[ci].Positions[vi]);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    /*
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
       for(int vi=0;vi<Cells[ci].NV;ci++){
@@ -230,12 +262,12 @@ namespace DPM3D{
           }
           if(minrij){
             glm::dvec3 delta = *minrij;
-            /*
+            
             //Cells[ci].Forces[vi] += delta * Kat * 0.5 * (pow(mindist,2));
-            if(mindist != 0)
-              Cells[ci].Forces[vi] -= glm::normalize(delta) * Kat * (1.0-mindist)/l0;
+            //if(mindist != 0)
+              //Cells[ci].Forces[vi] -= glm::normalize(delta) * Kat * (1.0-mindist)/l0;
               //Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
-              */
+              
             double sij = sqrt(Cells[ci].a0);
             double xij = mindist/sij;
             double ftmp = Kat*(1.0-xij)/sij;
@@ -247,6 +279,7 @@ namespace DPM3D{
         }
       }
     }
+    */
 
     void Tissue::GeneralAttraction(int ci){
       double dist;

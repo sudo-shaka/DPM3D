@@ -842,14 +842,10 @@ namespace DPM3D{
       //solid angle method:
       double totalOmega = 0.0;
       for(const auto& tri : FaceIndices){
-        glm::dvec3 a = Positions[tri[0]] - point;
-        glm::dvec3 b = Positions[tri[1]] - point;
-        glm::dvec3 c = Positions[tri[2]] - point;
+        glm::dvec3 u = glm::normalize(Positions[tri[0]] - point);
+        glm::dvec3 v = glm::normalize(Positions[tri[1]] - point);
+        glm::dvec3 w = glm::normalize(Positions[tri[2]] - point);
         
-        glm::dvec3 u = glm::normalize(a);
-        glm::dvec3 v = glm::normalize(b);
-        glm::dvec3 w = glm::normalize(c);
-
         double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
         double num = glm::dot(u,glm::cross(v,w));
         
