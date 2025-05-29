@@ -1,3 +1,4 @@
+#include <glm/vector_relational.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <math.h>
 #include <math.h>
@@ -202,7 +203,7 @@ namespace DPM3D{
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
                     double ftmp = dist/l0 * Kat;
-                    double lifetime = std::exp(std::abs(ftmp)/f0);
+                    double lifetime = std::exp(std::fabs(ftmp)/f0);
                     ftmp /= lifetime;
                     Cells[ci].Forces[vi] += 0.5 * ftmp * glm::normalize(Cells[cj].Positions[vj] - Cells[ci].Positions[vi]);
                   }
@@ -229,7 +230,7 @@ namespace DPM3D{
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
                     double ftmp = dist/l0 * Kat;
-                    double lifetime = std::exp(-std::abs(ftmp)/f0) + 0.5 * std::exp(-std::pow((std::abs(ftmp)-f0)/f0,2));
+                    double lifetime = std::exp(-std::fabs(ftmp)/f0) + 0.5 * std::exp(-std::pow((std::fabs(ftmp)-f0)/f0,2));
                     ftmp /= lifetime;
                     Cells[ci].Forces[vi] += 0.5 * ftmp * glm::normalize(Cells[cj].Positions[vj] - Cells[ci].Positions[vi]);
                   }
@@ -326,7 +327,7 @@ namespace DPM3D{
         if(cj == ci) continue;
         std::vector<double> windingNumbers = findWindingNumber(ci,cj);
         for(int vi=0;vi<Cells[ci].NV;vi++){
-          Cells[ci].Forces[vi] += std::abs(windingNumbers[vi]) * 0.5 * Kre * (Cells[ci].GetCOM() - Cells[ci].Positions[vi]);
+          Cells[ci].Forces[vi] += std::fabs(windingNumbers[vi]) * 0.5 * Kre * (Cells[ci].GetCOM() - Cells[ci].Positions[vi]);
         }
       }
     }
@@ -427,34 +428,34 @@ namespace DPM3D{
         std::cerr << "Error: Trying to find if cell is inside itself" << std::endl;
         return windingNumber;
       }
-      for(int vi = 0; vi < Cells[ci].NV; vi++){
+      glm::dvec3 center = Cells[ci].GetCOM();
+      std::vector<std::array<glm::dvec3,3>> wrappedTriangles;
+      for(const auto& fi : Cells[cj].FaceIndices){
+          glm::dvec3 a = Cells[cj].Positions[fi[0]];
+          glm::dvec3 b = Cells[cj].Positions[fi[1]];
+          glm::dvec3 c = Cells[cj].Positions[fi[2]];
+          if(PBC){
+            a -= L * glm::round((a-center)/L);
+            b -= L * glm::round((b-center)/L);
+            c -= L * glm::round((c-center)/L);
+          }
+          wrappedTriangles.push_back({a,b,c});
+      }
+      for(int vi=0;vi<Cells[ci].NV;vi++){
         glm::dvec3 point = Cells[ci].Positions[vi];
         double totalOmega = 0.0;
-        for(const auto& tri : Cells[cj].FaceIndices){
-          glm::dvec3 a = Cells[cj].Positions[tri[0]] - point;
-          glm::dvec3 b = Cells[cj].Positions[tri[1]] - point;
-          glm::dvec3 c = Cells[cj].Positions[tri[2]] - point;
-
-          if(PBC){
-            a -= L * round(a/L);
-            b -= L * round(b/L);
-            c -= L * round(c/L);
-          }
-
-          if(glm::any(glm::isnan(a)) || glm::any(glm::isnan(b)) || glm::any(isnan(c))){
-            std::cerr << "NaN value found in BVH gradient vectors" << std::endl;
-          }
-
-          glm::dvec3 u = glm::normalize(a);
-          glm::dvec3 v = glm::normalize(b);
-          glm::dvec3 w = glm::normalize(c);
-
+        for(const auto& tri : wrappedTriangles){
+          glm::dvec3 a = tri[0];
+          glm::dvec3 b = tri[1];
+          glm::dvec3 c = tri[2];
+          glm::dvec3 u = glm::normalize(a - point);
+          glm::dvec3 v = glm::normalize(b - point);
+          glm::dvec3 w = glm::normalize(c - point);
           double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
           if(denom < 1e-8) continue;
           double num = glm::dot(u,glm::cross(v,w));
           double omega = 2.0 * atan2(num,denom);
-          totalOmega += omega;
-          if(glm::isnan(omega)) std::cerr << "omega in winding number calculation is NaN" << std::endl;
+          if(!std::isnan(omega)) totalOmega += omega;
         }
         windingNumber[vi] = totalOmega / (4.0 * M_PI);
       }
@@ -463,30 +464,9 @@ namespace DPM3D{
 
     std::vector<bool> Tissue::FindOverlaps(int ci, int cj){
       std::vector<bool> overlaps(Cells[ci].NV,false);
+      std::vector<double> windingNumber = findWindingNumber(ci,cj);
       for(int vi = 0; vi < Cells[ci].NV; vi++){
-        glm::dvec3 point = Cells[ci].Positions[vi];
-        double totalOmega = 0.0;
-        for(const auto& tri : Cells[cj].FaceIndices){
-          glm::dvec3 a = Cells[cj].Positions[tri[0]] - point;
-          glm::dvec3 b = Cells[cj].Positions[tri[1]] - point;
-          glm::dvec3 c = Cells[cj].Positions[tri[2]] - point;
-          if(PBC){
-            a -= L * round(a/L);
-            b -= L * round(b/L);
-            c -= L * round(c/L);
-          }
-          glm::dvec3 u = glm::normalize(a);
-          glm::dvec3 v = glm::normalize(b);
-          glm::dvec3 w = glm::normalize(c);
-          double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
-          double num = glm::dot(u,glm::cross(v,w));
-
-          double omega = 2.0 * atan2(num,denom);
-          totalOmega += omega;
-        }
-
-        double windingNumber = totalOmega / (4.0 * M_PI);
-        overlaps[vi] = windingNumber > 0.9;
+        overlaps[vi] = std::fabs(windingNumber[vi]) > 0.9;
       }
       return overlaps;
     }
