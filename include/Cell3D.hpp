@@ -25,6 +25,7 @@ namespace DPM3D {
             double Kb;
             double Ks;
             int ntriangles;
+            glm::dvec3 COM;
             std::vector<std::vector<int>> midpointCache;
             std::vector<glm::dvec3> Positions;
             std::vector<glm::dvec3> Velocities;

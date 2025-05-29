@@ -284,7 +284,6 @@ namespace DPM3D{
     void Tissue::GeneralAttraction(int ci){
       double dist;
       double l0 = Cells[ci].l0;
-//      glm::dvec3 com = Cells[ci].GetCOM();
       for(int vi=0; vi < Cells[ci].NV; vi++){
         for(int cj=0;cj<NCELLS;cj++){
           if(ci!=cj){
@@ -327,7 +326,7 @@ namespace DPM3D{
         if(cj == ci) continue;
         std::vector<double> windingNumbers = findWindingNumber(ci,cj);
         for(int vi=0;vi<Cells[ci].NV;vi++){
-          Cells[ci].Forces[vi] += std::fabs(windingNumbers[vi]) * 0.5 * Kre * (Cells[ci].GetCOM() - Cells[ci].Positions[vi]);
+          Cells[ci].Forces[vi] += std::fabs(windingNumbers[vi]) * 0.5 * Kre * (Cells[ci].COM - Cells[ci].Positions[vi]);
         }
       }
     }
@@ -402,7 +401,7 @@ namespace DPM3D{
       for(pi=0;pi<ECM.NP;pi++){
         ECM.Forces[pi] *= 0.0;
         for(ci=0;ci<NCELLS;ci++){
-          COM = Cells[ci].GetCOM();
+          COM = Cells[ci].COM;
           l0 = Cells[ci].l0;
           for(vi=0;vi<Cells[ci].NV;vi++){
             dist = distance(Cells[ci].Positions[vi],ECM.Positions[pi]);
@@ -428,17 +427,35 @@ namespace DPM3D{
         std::cerr << "Error: Trying to find if cell is inside itself" << std::endl;
         return windingNumber;
       }
-      glm::dvec3 center = Cells[ci].GetCOM();
+      
+      glm::dvec3 shift(0.0); 
+      if(PBC){
+        shift = L * round((Cells[ci].COM-Cells[cj].COM)/L);
+      }
+
+      //AABB check first
+      glm::dvec3 minA(FLT_MAX), maxA(-FLT_MAX), minB(FLT_MAX), maxB(-FLT_MAX);
+      for(const auto& v : Cells[ci].Positions){
+        minA = glm::min(minA,v);
+        maxA = glm::max(maxA,v);
+      }
+
+      for(const auto& v : Cells[cj].Positions){
+        minB = glm::min(minB,v+shift);
+        maxB = glm::max(maxB,v+shift);
+      }
+
+      bool overlapX = maxA.x >= minB.x && minA.x <= maxB.x;
+      bool overlapY = maxA.y >= minB.y && minA.y <= maxB.y;
+      bool overlapZ = maxA.z >= minB.z && minA.z <= maxB.z;
+      bool BBoverlap = overlapX && overlapY && overlapZ;
+      if(!BBoverlap) return windingNumber;
+
       std::vector<std::array<glm::dvec3,3>> wrappedTriangles;
       for(const auto& fi : Cells[cj].FaceIndices){
-          glm::dvec3 a = Cells[cj].Positions[fi[0]];
-          glm::dvec3 b = Cells[cj].Positions[fi[1]];
-          glm::dvec3 c = Cells[cj].Positions[fi[2]];
-          if(PBC){
-            a -= L * glm::round((a-center)/L);
-            b -= L * glm::round((b-center)/L);
-            c -= L * glm::round((c-center)/L);
-          }
+          glm::dvec3 a = Cells[cj].Positions[fi[0]] + shift;
+          glm::dvec3 b = Cells[cj].Positions[fi[1]] + shift;
+          glm::dvec3 c = Cells[cj].Positions[fi[2]] + shift;
           wrappedTriangles.push_back({a,b,c});
       }
       for(int vi=0;vi<Cells[ci].NV;vi++){
@@ -463,7 +480,7 @@ namespace DPM3D{
     }
 
     std::vector<bool> Tissue::FindOverlaps(int ci, int cj){
-      std::vector<bool> overlaps(Cells[ci].NV,false);
+      std::vector<bool> overlaps(Cells[ci].NV);
       std::vector<double> windingNumber = findWindingNumber(ci,cj);
       for(int vi = 0; vi < Cells[ci].NV; vi++){
         overlaps[vi] = std::fabs(windingNumber[vi]) > 0.9;

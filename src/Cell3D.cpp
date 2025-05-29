@@ -105,6 +105,7 @@ namespace DPM3D{
         s0 = pow((6*sqrt(M_PI)*v0*calA0),(2.0/3.0));
         a0 = (s0/(double)ntriangles);
         l0 = sqrt((a0)/sqrt(3));      
+        COM = GetCOM();
         for(i=0;i<NV;i++){
             Positions[i] *= r0;
             Positions[i].x += _x;
@@ -170,6 +171,7 @@ namespace DPM3D{
             Velocities[i] = 0.5*Forces[i];
             Positions[i] += Forces[i]*dt;
         }
+        COM = GetCOM();
         ResetForces();
     }
 
@@ -293,53 +295,28 @@ namespace DPM3D{
 
     void Cell::VolumeForceUpdate(){
       if(Kv > 0.0001){
-        double volume = GetVolume(),dist, nucdist = (0.5*pow((3*v0)/(4*M_PI),(1/3)));
+        double volume = GetVolume(),dist, nucdist = (0.5*pow((3.0*v0)/(4.0*M_PI),(1.0/3.0)));
         double volumeStrain = (volume/v0) - 1.0;
-        glm::dvec3 center = GetCOM(),tmp;
+        glm::dvec3 tmp;
         std::vector<int> tri{0,0,0};
         int i,j;
         for(i=0;i<ntriangles;i++){
             tri = FaceIndices[i];
-            tmp = glm::cross((Positions[tri[1]]-center)- (Positions[tri[0]]-center),
-                (Positions[tri[2]]-center) - (Positions[tri[0]]-center));
+            tmp = glm::cross((Positions[tri[1]]-COM)- (Positions[tri[0]]-COM),
+                (Positions[tri[2]]-COM) - (Positions[tri[0]]-COM));
             tmp = glm::normalize(tmp);
             for(j=0;j<3;j++){
-                dist = distance(center,Positions[tri[j]]);
+                dist = distance(COM,Positions[tri[j]]);
                 if(nucdist < dist)
                     Forces[tri[j]] -= Kv* 0.5 * volumeStrain * (tmp);
                 else
-                   Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Positions[tri[j]]);
+                   Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (COM-Positions[tri[j]]);
             }
         }
       }
     }
     void Cell::AreaForceUpdate(){
-      if(Ka > 0.0001){/*
-        //double area,areaStrain;
-        double length[3],dli[3],dlim1[3],l0 = sqrt((4*a0)/sqrt(3));
-        int i,j, im1[] = {2,0,1}, ip1[] = {1,2,0};
-        std::vector<int> tri{0,0,0};
-        glm::dvec3 center(0.0,0.0,0.0);
-        std::vector<glm::dvec3> positions(3,center), lv(3,center), ulv(3,center);
-        for(i=0;i<ntriangles;i++){
-            tri = FaceIndices[i];
-            for(j=0;j<3;j++){
-                positions[j] = Positions[tri[j]];
-            }
-            //center = (positions[0]+positions[1]+positions[2])/3.0;
-            for(j=0;j<3;j++){
-                lv[j] = positions[ip1[j]] - positions[j];
-                length[j] = distance(positions[ip1[j]],positions[j]);
-            }
-            for(j=0;j<3;j++){
-                ulv[j] = lv[j]/length[j];
-                dli[j] = length[j]/l0 - 1.0;
-                dlim1[j] = (length[im1[j]]/l0) - 1.0;
-            }
-            for(j=0;j<3;j++){
-                Forces[tri[j]] += (Ka*(sqrt(a0)/l0)) * (dli[j]*ulv[j]-dlim1[j]*ulv[im1[j]]);
-            }
-        }*/
+      if(Ka > 0.0001){
         double l0 = sqrt((4*a0)/sqrt(3));
         for(const auto& tri : FaceIndices){
           glm::dvec3 pos0 = Positions[tri[0]];
@@ -444,24 +421,24 @@ namespace DPM3D{
         return Forces;
     }
     std::vector<glm::dvec3> Cell::GetVolumeForces(DPM3D::Cell Cell){
-        double volume = Cell.GetVolume(),dist, nucdist = (0.5*pow((3*Cell.v0)/(4*M_PI),(1/3)));
+        double volume = Cell.GetVolume(),dist, nucdist = (0.5*pow((3.0*Cell.v0)/(4.0*M_PI),(1.0/3.0)));
         double volumeStrain = (volume/Cell.v0) - 1.0;
-        glm::dvec3 center = Cell.GetCOM(),tmp;
+        glm::dvec3 tmp;
         std::vector<glm::dvec3> Forces;
         Forces.resize(Cell.NV);
         std::vector<int> tri{0,0,0};
         int i,j;
         for(i=0;i<Cell.ntriangles;i++){
             tri = Cell.FaceIndices[i];
-            tmp = glm::cross((Cell.Positions[tri[1]]-center)- (Cell.Positions[tri[0]]-center),
-                (Cell.Positions[tri[2]]-center) - (Cell.Positions[tri[0]]-center));
+            tmp = glm::cross((Cell.Positions[tri[1]]-Cell.COM)- (Cell.Positions[tri[0]]-Cell.COM),
+                (Cell.Positions[tri[2]]-Cell.COM) - (Cell.Positions[tri[0]]-Cell.COM));
             tmp = glm::normalize(tmp);
             for(j=0;j<3;j++){
-                dist = distance(center,Cell.Positions[tri[j]]);
+                dist = distance(Cell.COM,Cell.Positions[tri[j]]);
                 if(nucdist < dist)
                     Forces[tri[j]] -= Cell.Kv* 0.5 * volumeStrain * (tmp);
                 else
-                   Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (center-Cell.Positions[tri[j]]);
+                   Forces[tri[j]] -= (1.0-dist/(nucdist))/nucdist * (Cell.COM-Cell.Positions[tri[j]]);
             }
         }
 
@@ -558,7 +535,7 @@ namespace DPM3D{
     }
 
     void Cell::SurfaceGradient(double z, double mindist, double grad){
-        glm::dvec3 surfacepos, A,B, com = GetCOM();
+        glm::dvec3 surfacepos, A,B;
         double dist, ftmp;
         std::vector<int> tri{0,0,0};
         for(int i=0;i<ntriangles;i++){
@@ -571,9 +548,9 @@ namespace DPM3D{
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/mindist;
-                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    Forces[tri[j]] += ftmp*(glm::normalize(Positions[tri[j]] - COM));
                     ExtendVertex(tri[j],a0);
-                    if(Positions[tri[j]].x < com.x){
+                    if(Positions[tri[j]].x < COM.x){
                       Forces[tri[j]] *= (Ks*grad);
                     }
                     else{
@@ -588,7 +565,7 @@ namespace DPM3D{
     }
 
     void Cell::StickToSurface(double z, double mindist){
-        glm::dvec3 surfacepos,A,B,com = GetCOM();
+        glm::dvec3 surfacepos,A,B;
         double dist,ftmp;
         std::vector<int> tri{0,0,0};
 
@@ -602,7 +579,7 @@ namespace DPM3D{
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/mindist;
-                    Forces[tri[j]] += Ks*ftmp*glm::normalize(Positions[tri[j]] - com);
+                    Forces[tri[j]] += Ks*ftmp*glm::normalize(Positions[tri[j]] - COM);
                 }
                 if(Positions[tri[j]].z < z){
                     Forces[tri[j]].z += 10*pow((Positions[tri[j]].z - z),2);
@@ -635,7 +612,7 @@ namespace DPM3D{
     }
 
     void Cell::StickToSurfaceSlip(double z, double mindist){
-        glm::dvec3 surfacepos,A,B,com = GetCOM();
+        glm::dvec3 surfacepos,A,B;
         double dist,ftmp;
         std::vector<int> tri{0,0,0};
 
@@ -650,7 +627,7 @@ namespace DPM3D{
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0 && dist < mindist){
                     ftmp = (1.0 - dist/(mindist))/dist;
-                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - COM));
                     isFocalAdh[tri[j]] = true;
                 }
                 if(Positions[tri[j]].z < z){
@@ -692,7 +669,7 @@ namespace DPM3D{
     }
 
     void Cell::StickToSurfaceCatch(double z, double mindist){
-        glm::dvec3 surfacepos,A,B,com = GetCOM();
+        glm::dvec3 surfacepos,A,B;
         double dist,ftmp;
         std::vector<int> tri{0,0,0};
 
@@ -706,7 +683,7 @@ namespace DPM3D{
                 dist = distance(surfacepos,Positions[tri[j]]);
                 if((A.x*B.y - A.y*B.x)< 0.0){
                     ftmp = exp(-dist/mindist)*sin(mindist*(dist/mindist));
-                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - com));
+                    Forces[tri[j]] += Ks*ftmp*(glm::normalize(Positions[tri[j]] - COM));
                     //ExtendVertex(tri[j],a0);
                 }
                 if(Positions[tri[j]].z < z){
@@ -758,8 +735,7 @@ namespace DPM3D{
 
 
     void Cell::ExtendVertex(int vi, double k){
-        glm::dvec3 center = GetCOM();
-        Forces[vi] += k*glm::normalize(Positions[vi]-center);
+        Forces[vi] += k*glm::normalize(Positions[vi]-COM);
     }
 
 
