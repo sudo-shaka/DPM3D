@@ -16,14 +16,16 @@
 namespace DPM3D{
     //constructors
     Cell::Cell(double _x, double _y, double _z, double _calA0, int f, double _r0 ,double _Kv, double _Ka, double _Kb){
-        calA0 = _calA0;
-        r0 = _r0;
-        Kv = _Kv;
-        Ka = _Ka;
-        Kb = _Kb;
-        Ks = 1.0;
+        calA0 = _calA0; //Relationship between surface and volume to determine preffered sphericity
+        r0 = _r0; //starting radius
+        Kv = _Kv; //volume stiffness
+        Ka = _Ka; //surfacearea stiffness
+        Kb = _Kb; //bending force stiffness
+        Ks = 0.0; //Surface attraction force stiffness
         int i,j,steps,a,b,c;
         double t = (1+sqrt(5)) / 2;
+
+        //making isohedron
         Positions.resize(12);
         Positions[0] = glm::dvec3(-1, t, 0);
         Positions[1] = glm::dvec3( 1,  t,  0);
@@ -94,6 +96,7 @@ namespace DPM3D{
             newFaces.shrink_to_fit();
         }
 
+        //allocating memory
         NV = (int)Positions.size();
         Velocities.resize(NV);
         Forces.resize(NV);

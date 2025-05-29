@@ -29,7 +29,7 @@ namespace DPM3D{
         std::vector<double> X,Y,Fx,Fy;
         X.resize(NCELLS); Y.resize(NCELLS);
         Fx.resize(NCELLS); Fy.resize(NCELLS);
-        double ri,rj,yi,yj,xi,xj,dx,dy,dist;
+        double ri,rj,yi,yj,xi,xj,dx,dy,dist, U;
         double ux,uy,ftmp,fx,fy;
         int  i,j,count;
         for(i=0;i<NCELLS;i++){
@@ -187,7 +187,6 @@ namespace DPM3D{
 
     void Tissue::JunctionSlipForceUpdate(int ci){
       UpdateJunctions();
-      double f0 = 1.0; //charateristic force scale for bond behavoir
       double dist, l0 = Cells[ci].l0;
       for(int vi = 0;vi < Cells[ci].NV; vi++){
         if(Cells[ci].isJunction[vi]){
@@ -214,7 +213,6 @@ namespace DPM3D{
     
     void Tissue::JunctionCatchForceUpdate(int ci){
       UpdateJunctions();
-      double f0 = 1.0; //charateristic force scale for bond behavoir
       double dist, l0 = Cells[ci].l0;
       for(int vi = 0;vi < Cells[ci].NV; vi++){
         if(Cells[ci].isJunction[vi]){

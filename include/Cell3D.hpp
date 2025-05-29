@@ -10,23 +10,26 @@
 namespace DPM3D {
     class Cell
     {
+        private:
+            //for constructing isohedron
+            std::vector<std::vector<int>> midpointCache; 
+            glm::dvec3 GetMiddlePoint(int i, int j);
+            void AddFaceIndex(int a, int b, int c);
+            int AddMiddlePoint(int p1, int p2);
         public:
-            int NV;
-            double calA0;
-            double v0;
-            double r0;
-            double a0;
-            double s0;
-            double l0;
-            double U;
-            double Kv;
-            double Ka;
-            double Kl;
-            double Kb;
-            double Ks;
-            int ntriangles;
-            glm::dvec3 COM;
-            std::vector<std::vector<int>> midpointCache;
+            int NV;         //number of verts
+            double calA0;   //preffered sphericity
+            double v0;      //starting volume
+            double r0;      //staring radius
+            double a0;      //preffered area of each face
+            double s0;      //preffered total surface area
+            double l0;      //perffered length between verts
+            double Kv;      //Volume stiffness
+            double Ka;      //SurfaceArea stiffness
+            double Kb;      //bending force stiffness
+            double Ks;      //Stick to surface stiffness
+            int ntriangles; //number of faces
+            glm::dvec3 COM; //Center of mass (Updated each Euler Update)
             std::vector<glm::dvec3> Positions;
             std::vector<glm::dvec3> Velocities;
             std::vector<glm::dvec3> Forces;
@@ -44,9 +47,6 @@ namespace DPM3D {
                  std::vector<std::vector<int>> Triangles);
 
             void ResetForces();
-            void AddFaceIndex(int a, int b, int c);
-            glm::dvec3 GetMiddlePoint(int i, int j);
-            int AddMiddlePoint(int p1, int p2);
             void AddVertex(glm::dvec3 vec);
             void ShapeForceUpdate();
             void VolumeForceUpdate();
@@ -83,6 +83,7 @@ namespace DPM3D {
             std::array<std::vector<double>,3> GetForces();
     };
 
+    //some needed math functions
     glm::dvec3 GetMiddlePoint(glm::dvec3 a, glm::dvec3 b);
     bool polarCompare(glm::dvec2& a, glm::dvec2& b, glm::dvec2& p0);
     std::vector<int> newFace(int a, int b, int c);

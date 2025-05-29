@@ -41,7 +41,6 @@ void init_Cell(py::module &m){
     .def_readwrite("v0",&DPM3D::Cell::v0)
     .def_readwrite("Kb",&DPM3D::Cell::Kb)
     .def_readwrite("Ka",&DPM3D::Cell::Ka)
-    .def_readwrite("Kl",&DPM3D::Cell::Kl)
     .def_readwrite("Kv",&DPM3D::Cell::Kb)
     .def_readwrite("Positions",&DPM3D::Cell::Positions)
     .def_readwrite("TriangleIndex",&DPM3D::Cell::FaceIndices)
