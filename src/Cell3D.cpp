@@ -854,7 +854,7 @@ namespace DPM3D{
       }
 
       double windingNumber = totalOmega / (4.0 * M_PI);
-      return windingNumber > 0.5;
+      return windingNumber > 0.9;
     }
 
     std::array<std::vector<double>,3> Cell::GetPositions(){

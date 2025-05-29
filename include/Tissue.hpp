@@ -30,6 +30,7 @@ namespace DPM3D{
         void EulerUpdate(int nsteps, double dt);
         void EulerUpdate(double dt);
         std::vector<bool> FindOverlaps(int ci, int cj);
+        std::vector<double> findWindingNumber(int ci, int cj);
         void MonolayerDisperse();
         void TissueDisperse();
         void StickToSurface(double z, double mindist);

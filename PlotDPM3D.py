@@ -100,6 +100,8 @@ def plottissue2D(Tissue):
     r3 = random.rand(Tissue.NCELLS)
     for ci in range(Tissue.NCELLS):
         pos = Tissue.Cells[ci].GetPositions()
+        if np.isnan(pos).any():
+            print("NaN values found!")
         x,y = np.mod(pos[0],Tissue.L), np.mod(pos[1],Tissue.L)
         for tri in Tissue.Cells[ci].TriangleIndex:
             vx,vy = [x[i] for i in tri], [y[i] for i in tri]
