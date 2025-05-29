@@ -15,6 +15,7 @@ void init_Tissue(py::module &m){
     .def_readonly("phi0",&DPM3D::Tissue::phi0)
     .def_readwrite("Kre",&DPM3D::Tissue::Kre)
     .def_readwrite("Kat",&DPM3D::Tissue::Kat)
+    .def_readwrite("f0",&DPM3D::Tissue::f0)
     .def_readwrite("AttractionMethod",&DPM3D::Tissue::attactionMethod)
     .def_readonly("NCELLS",&DPM3D::Tissue::NCELLS)
     .def_readonly("Cells",&DPM3D::Tissue::Cells)

@@ -317,6 +317,8 @@ namespace DPM3D{
         }
       }
        //prevent overlaps
+      if(Kre == 0) return;
+
       for(int cj=0; cj < NCELLS;cj++){
         if(cj == ci) continue;
         std::vector<double> windingNumbers = findWindingNumber(ci,cj);
