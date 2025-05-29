@@ -11,13 +11,14 @@ for ci in range(T.NCELLS):
   T.Cells[ci].Ks = 0.0
   T.Cells[ci].l0 *= 3
 T.Kre = 1.0
-T.Kat = 0.0;
+T.Kat = 2.0;
 
-T.AttractionMethod = "JunctionSlip"
+#T.AttractionMethod = "JunctionCatch"
+#T.AttractionMethod = "JunctionSlip"
+T.AttractionMethod = "General"
 nsteps = 100; nout = 25; dt = 0.01
 for i in progressbar(range(nout)):
   PlotDPM3D.plottissue2D(T)
-  print(sum(T.FindOverlaps(0,1)))
   plt.savefig("/tmp/"+str(i)+"test_out.png")
   plt.close()
   for _ in range(nsteps):

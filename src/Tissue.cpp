@@ -1,10 +1,7 @@
 #include <glm/vector_relational.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
-#include <math.h>
-#include <math.h>
 #include "Tissue.hpp"
 #include <glm/geometric.hpp>
-#include <cmath>
 #include <vector>
 #include <array>
 #include <string>
@@ -58,9 +55,9 @@ namespace DPM3D{
                         yj = Y[j];
                         rj = Cells[j].r0*2;
                         dx = xj-xi;
-                        dx -= L*round(dx/L);
+                        dx -= L*std::round(dx/L);
                         dy = yj-yi;
-                        dy -= L*round(dy/L);
+                        dy -= L*std::round(dy/L);
                         dist = sqrt(dx*dx + dy*dy);
                         if(dist < 0.0)
                             dist *= -1;
@@ -128,7 +125,7 @@ namespace DPM3D{
                 for(j=0;j<NCELLS;j++){
                     if(j!=i){
                         rij = centers[j] - centers[i];
-                        rij -= L*round(rij/L);
+                        rij -= L*glm::round(rij/L);
                         dist = sqrt(rij.x*rij.x + rij.y*rij.y + rij.z*rij.z);
                         if(dist < 0.0){
                             dist *=-1;
@@ -199,7 +196,7 @@ namespace DPM3D{
               for(int vj=0;vj<Cells[cj].NV;vj++){
                 if(Cells[cj].isJunction[vj]){
                   glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
-                  if(PBC){rij-= L*round(rij/L);}
+                  if(PBC){rij-= L*glm::round(rij/L);}
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
                     double ftmp = dist/l0 * Kat;
@@ -226,7 +223,7 @@ namespace DPM3D{
               for(int vj=0;vj<Cells[cj].NV;vj++){
                 if(Cells[cj].isJunction[vj]){
                   glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
-                  if(PBC){rij-= L*round(rij/L);}
+                  if(PBC){rij-= L*glm::round(rij/L);}
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
                     double ftmp = dist/l0 * Kat;
@@ -253,7 +250,7 @@ namespace DPM3D{
           for(int vj=0;vj<Cells[cj].NV;vj++){
             if(Cells[cj].isJunction[vj]){
             glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
-            if(PBC){rij -= L*round(rij/L);};
+            if(PBC){rij -= L*glm::round(rij/L);};
             double dist = sqrt(dot(rij,rij));
             if(dist < mindist){
               mindist = dist;
@@ -290,7 +287,7 @@ namespace DPM3D{
             for(int vj=0;vj<Cells[cj].NV;vj++){
               glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
               if(PBC){
-                rij -= L*round(rij/L);
+                rij -= L*glm::round(rij/L);
               }
               dist = sqrt(glm::dot(rij,rij));
               if(dist < l0){
@@ -430,7 +427,7 @@ namespace DPM3D{
       
       glm::dvec3 shift(0.0); 
       if(PBC){
-        shift = L * round((Cells[ci].COM-Cells[cj].COM)/L);
+        shift = L * glm::round((Cells[ci].COM-Cells[cj].COM)/L);
       }
 
       //AABB check first
