@@ -301,20 +301,14 @@ namespace DPM3D{
     void Tissue::CellInteractingUpdate(int ci){
       std::vector<int> tri{0,0,0}, trij{0,0,0};
       if(Kat != 0){
-        if(attactionMethod == "JunctionSlip"){
-          JunctionSlipForceUpdate(ci);
-        }
-        else if(attactionMethod == "JunctionCatch"){
-          JunctionCatchForceUpdate(ci);
-        }
-        else if(attactionMethod == "General"){
-          GeneralAttraction(ci);
-        }
-        else{
-          std::cerr << attactionMethod << " is not a valid attaction method\n" <<
-            "please use JunctionSlip, JunctionCatch, or General" << std::endl;
-          exit(1);
-        }
+        if(attactionMethod == "JunctionSlip") JunctionSlipForceUpdate(ci);
+        else if(attactionMethod == "JunctionCatch") JunctionCatchForceUpdate(ci);
+        else if(attactionMethod == "General") GeneralAttraction(ci);
+        else std::cerr << attactionMethod
+              << " is not a valid attaction method\n" 
+              << "Please use JunctionSlip, JunctionCatch, or General" 
+              << "... no attraction force update performed."
+              << std::endl;
       }
        //prevent overlaps
       if(Kre == 0) return;
