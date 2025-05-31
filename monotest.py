@@ -26,8 +26,7 @@ for i in progressbar(range(nout)):
   for _ in range(nsteps):
     T.UpdateShapeForces()
     T.InteractingUpdate()
-    for ci in range(T.NCELLS):
-      T.Cells[ci].StickToSurface(0.25,1.0)
+    T.StickToSurface(0.25,1.0)
     T.EulerUpdate(dt)
   PlotDPM3D.plottissue2D(T)
   plt.savefig("/tmp/"+str(i)+"test_out.png")
