@@ -71,6 +71,7 @@ void init_Cell(py::module &m){
     .def("StickToSurfaceSlip",py::overload_cast<double,double>(&DPM3D::Cell::StickToSurfaceSlip),py::arg("minz"),py::arg("mindist"))
     .def("StickToSurfaceSlip",py::overload_cast<DPM3D::ECM,double>(&DPM3D::Cell::StickToSurfaceSlip),py::arg("ECM"),py::arg("mindist"))
     .def("SurfaceGradient",&DPM3D::Cell::SurfaceGradient)
+    .def("StickToSurfaceStrech",&DPM3D::Cell::StickToSurfaceStretch)
     .def("RepelSurface",&DPM3D::Cell::RepelSurface)
     .def("ExtendVertex",py::overload_cast<int,double>(&DPM3D::Cell::ExtendVertex),py::arg("vertexidx"),py::arg("Force"))
     .def("GetVolume",&DPM3D::Cell::GetVolume)

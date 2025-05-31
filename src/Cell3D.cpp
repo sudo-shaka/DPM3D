@@ -728,6 +728,14 @@ namespace DPM3D{
         }
     }
 
+    void Cell::StickToSurfaceStretch(double z, double mindist, double xx, double xy){
+      StickToSurface(z,mindist);
+      for(int vi=0;vi < NV; vi++){
+        Forces[vi].x *= xx;
+        Forces[vi].y *= xy;
+      }
+    }
+
     void Cell::RepelSurface(double z){
       for(int vi=0;vi<NV;vi++){
         if(Positions[vi].z < z){
@@ -788,37 +796,7 @@ namespace DPM3D{
         return compos;
     }
 
-    bool Cell::pointInside(glm::dvec3 point){
-      //glm::dvec3 direction = glm::normalize(GetCOM()-point);
-      /*glm::dvec3 direction(0.0,1.0,0.0);
-      int n_crosses = 0;
-      for(int i=0;i<ntriangles;i++){
-        std::vector<int>& tri = FaceIndices[i];
-        glm::dvec3 v0 = Positions[tri[0]];
-        glm::dvec3 v1 = Positions[tri[1]];
-        glm::dvec3 v2 = Positions[tri[2]];
-
-        glm::dvec3 edge1 = v1-v0;
-        glm::dvec3 edge2 = v2-v0;
-
-        glm::dvec3 pvec = glm::cross(direction,edge2);
-        double det = glm::dot(edge1,pvec);
-        double inv_det = 1.0/det;
-
-        glm::dvec3 tvec = point - v0;
-        double u = glm::dot(tvec,pvec) * inv_det;
-        if(u < 0.0 || u > 1.0) continue;
-        glm::dvec3 qvec = glm::cross(tvec,edge1);
-        double v = glm::dot(direction,qvec) * inv_det;
-        if(v < 0.0 || (u+v) > 1.0) continue;
-
-        n_crosses++;
-      }
-      return (n_crosses % 2 != 0);
-
-      */
-
-      //solid angle method:
+    double Cell::WindingNumberOf(glm::dvec3 point){
       double totalOmega = 0.0;
       for(const auto& tri : FaceIndices){
         glm::dvec3 u = glm::normalize(Positions[tri[0]] - point);
@@ -826,14 +804,20 @@ namespace DPM3D{
         glm::dvec3 w = glm::normalize(Positions[tri[2]] - point);
         
         double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
+        if(denom < 1e-8) continue;
         double num = glm::dot(u,glm::cross(v,w));
         
         double omega = 2.0*atan2(num,denom);
-        totalOmega += omega;
+        if(!std::isnan(omega)) totalOmega += omega;
       }
 
       double windingNumber = totalOmega / (4.0 * M_PI);
-      return windingNumber > 0.9;
+      return windingNumber;
+      
+    }
+
+    bool Cell::pointInside(glm::dvec3 point){
+      return WindingNumberOf(point) > 0.9;
     }
 
     std::array<std::vector<double>,3> Cell::GetPositions(){

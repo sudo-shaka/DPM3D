@@ -10,6 +10,7 @@
 #include <glm/vec3.hpp>
 #include <glm/gtx/norm.hpp>
 #include <thread>
+#include <fstream>
 
 namespace DPM3D{
     Tissue::Tissue(std::vector<DPM3D::Cell> _cells, double _phi0){
@@ -347,6 +348,16 @@ namespace DPM3D{
       Cells[ci].StickToSurface(z,mindist);
     }
 
+    void Tissue::StickToSurfaceStretch(double z, double mindist, double xx, double xy){
+      std::vector<std::thread> threads;
+      for(int i=0;i<NCELLS;i++){
+        threads.push_back(std::thread(&DPM3D::Cell::StickToSurfaceStretch,&this->Cells[i],z,mindist,xx,xy));
+      }
+      for(auto& thread : threads){
+        thread.join();
+      }
+    }
+
     void Tissue::EulerUpdate(int steps, double dt){
         int step;
         for(step=0;step<steps;step++)
@@ -442,30 +453,9 @@ namespace DPM3D{
       bool BBoverlap = overlapX && overlapY && overlapZ;
       if(!BBoverlap) return windingNumber;
 
-      std::vector<std::array<glm::dvec3,3>> wrappedTriangles;
-      for(const auto& fi : Cells[cj].FaceIndices){
-          glm::dvec3 a = Cells[cj].Positions[fi[0]] + shift;
-          glm::dvec3 b = Cells[cj].Positions[fi[1]] + shift;
-          glm::dvec3 c = Cells[cj].Positions[fi[2]] + shift;
-          wrappedTriangles.push_back({a,b,c});
-      }
       for(int vi=0;vi<Cells[ci].NV;vi++){
-        glm::dvec3 point = Cells[ci].Positions[vi];
-        double totalOmega = 0.0;
-        for(const auto& tri : wrappedTriangles){
-          glm::dvec3 a = tri[0];
-          glm::dvec3 b = tri[1];
-          glm::dvec3 c = tri[2];
-          glm::dvec3 u = glm::normalize(a - point);
-          glm::dvec3 v = glm::normalize(b - point);
-          glm::dvec3 w = glm::normalize(c - point);
-          double denom = 1.0 + glm::dot(u,v) + glm::dot(v,w) + glm::dot(w,u);
-          if(denom < 1e-8) continue;
-          double num = glm::dot(u,glm::cross(v,w));
-          double omega = 2.0 * atan2(num,denom);
-          if(!std::isnan(omega)) totalOmega += omega;
-        }
-        windingNumber[vi] = totalOmega / (4.0 * M_PI);
+        glm::dvec3 point = Cells[ci].Positions[vi] - shift;
+        windingNumber[vi] = Cells[cj].WindingNumberOf(point);
       }
       return windingNumber;
     }
@@ -497,5 +487,47 @@ namespace DPM3D{
         vesselPosition[1][vi] = c.Positions[vi].y;
       }
       return vesselPosition;
+    }
+
+    void Tissue::ExportPositions(std::string filename){
+      std::ofstream file;
+      file.open(filename);
+      for(int i=0; i<NCELLS;i++){
+        file << "Cell_" << i << ",X,";
+        for(auto& vert : Cells[i].Positions){
+          file << vert.x << ",";
+        }
+        file << "\nCell_" << i << ",Y,";
+        for(auto& vert : Cells[i].Positions){
+          file << vert.y << ",";
+        }
+        file << "\nCell_" << i << ",Z,";
+        for(auto& vert : Cells[i].Positions){
+          file << vert.z << ",";
+        }
+        file << std::endl;
+      }
+      file.close();
+    }
+
+    void Tissue::ExportForces(std::string filename){
+      std::ofstream file;
+      file.open(filename);
+      for(int i=0; i<NCELLS;i++){
+        file << "Cell_" << i << ",X,";
+        for(auto& force : Cells[i].Forces){
+          file << force.x << ",";
+        }
+        file << "\nCell_" << i << ",Y,";
+        for(auto& force : Cells[i].Forces){
+          file << force.y << ",";
+        }
+        file << "\nCell_" << i << ",Z,";
+        for(auto& force : Cells[i].Forces){
+          file << force.z << ",";
+        }
+        file << std::endl;
+      }
+      file.close();
     }
 }

@@ -26,6 +26,7 @@ void init_Tissue(py::module &m){
     .def("MonolayerDisperse",&DPM3D::Tissue::MonolayerDisperse)
     .def("TissueDisperse",&DPM3D::Tissue::TissueDisperse)
     .def("StickToSurface",&DPM3D::Tissue::StickToSurface)
+    .def("StickToSurfaceStrech",&DPM3D::Tissue::StickToSurfaceStretch)
     .def("InteractingUpdate",&DPM3D::Tissue::InteractingUpdate)
     .def("InteractECM",&DPM3D::Tissue::InteractECM)
     .def("JunctionSlipForceUpdate",&DPM3D::Tissue::JunctionSlipForceUpdate)
@@ -33,5 +34,7 @@ void init_Tissue(py::module &m){
     .def("UpdateJunctions",&DPM3D::Tissue::UpdateJunctions)
     .def("GetVesselPositions",&DPM3D::Tissue::GetVesselPosition)
     .def("applyShearStress",&DPM3D::Tissue::applyShearStress)
+    .def("ExportForces",&DPM3D::Tissue::ExportForces)
+    .def("ExportPositions",&DPM3D::Tissue::ExportPositions)
     ;
 }

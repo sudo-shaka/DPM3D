@@ -57,6 +57,7 @@ namespace DPM3D {
             void FindFocalAdhesion();
             void SurfaceGradient(double x, double mindist, double G);
             void StickToSurface(double x, double mindist);
+            void StickToSurfaceStretch(double x, double mindist, double xMultiplier, double yMultiplier);
             void StickToSurface(DPM3D::ECM ECM, double mindist);
             void StickToSurfaceCatch(double z, double mindist);
             void StickToSurfaceCatch(DPM3D::ECM ECM, double mindist);
@@ -64,7 +65,6 @@ namespace DPM3D {
             void StickToSurfaceSlip(DPM3D::ECM ECM, double mindist);
             void SetupSurface(int n);
             void RepelSurface(double z);
-            void SurfaceStrech(double scale);
             void ExtendVertex(int vi, double force);
             void EulerUpdate(int steps, double dt);
             void EulerUpdate(double dt);
@@ -73,7 +73,8 @@ namespace DPM3D {
             double GetArea(int triidx);
             double GetSurfaceArea();
             double GetCalA0();
-            bool pointInside(glm::dvec3);
+            double WindingNumberOf(glm::dvec3 point);
+            bool pointInside(glm::dvec3 point);
             glm::dvec3 GetCOM();
             static std::vector<glm::dvec3> GetShapeForces(DPM3D::Cell Cell);
             static std::vector<glm::dvec3> GetVolumeForces(DPM3D::Cell Cell);

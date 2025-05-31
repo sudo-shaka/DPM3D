@@ -34,12 +34,15 @@ namespace DPM3D{
         void TissueDisperse(); //distributes all cells over X/Y/Z plane
         void StickToSurface(double z, double mindist); //z is the distance of surface, mindist is the minimum distance for attraction to occour
         void CellStickToSurface(int ci, double z, double mindist); // same as above for a specific cell in tissue
+        void StickToSurfaceStretch(double z,  double mindist, double xx, double xy);
         void InteractECM(DPM3D::ECM ecm); //ECM is a list a point for a cells to adhere to
         void JunctionSlipForceUpdate(int ci); //Attraction method for cell (ci)
         void JunctionCatchForceUpdate(int ci); ////Attraction method for cell (ci)
         void GeneralAttraction(int ci);//Attraction method for cell (ci)
         std::vector<std::vector<double>> GetVesselPosition(int ci); //Takes cells attached to z=0 surface with PBC to make a cylindircal surface of cells (plotting plane as a vessel)
         void applyShearStress(std::array<double,3> fluidVelocity, double viscosity, double velocityGradient, double stiffness); //Apply a shear force over the faces of the cells going from the x direction
+        void ExportForces(std::string);
+        void ExportPositions(std::string);
     };
 }
 
