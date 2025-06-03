@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <glm/vector_relational.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include "Tissue.hpp"
@@ -226,7 +227,8 @@ namespace DPM3D{
                   dist = sqrt(dot(rij,rij));
                   if(dist < l0){
                     double ftmp = dist/l0 * Kat;
-                    double lifetime = std::exp(-std::fabs(ftmp)/f0) + 0.5 * std::exp(-std::pow((std::fabs(ftmp)-f0)/f0,2));
+                    double lifetime = std::exp(-std::fabs(ftmp)/f0) * 0.5 * std::exp(-std::pow((std::fabs(ftmp)-f0)/f0,2));
+                    if(lifetime < 1e-8) continue;
                     ftmp /= lifetime;
                     Cells[ci].Forces[vi] += 0.5 * ftmp * glm::normalize(Cells[cj].Positions[vj] - Cells[ci].Positions[vi]);
                   }
@@ -305,6 +307,7 @@ namespace DPM3D{
         if(attactionMethod == "JunctionSlip") JunctionSlipForceUpdate(ci);
         else if(attactionMethod == "JunctionCatch") JunctionCatchForceUpdate(ci);
         else if(attactionMethod == "General") GeneralAttraction(ci);
+        else if(attactionMethod == "PolarizedJunction") PolarizedJunctionForces(ci);
         else std::cerr << attactionMethod
               << " is not a valid attaction method\n" 
               << "Please use JunctionSlip, JunctionCatch, or General" 
@@ -355,6 +358,80 @@ namespace DPM3D{
       }
       for(auto& thread : threads){
         thread.join();
+      }
+    }
+
+    void Tissue::PolarizedJunctionForces(int ci){
+      Cells[ci].FindJunctions();
+      std::vector<double> x,y;
+      std::vector<std::vector<glm::dvec3>> rijs;
+      for(int vi=0;vi<Cells[ci].NV;vi++){
+        if(Cells[ci].isJunction[vi]){
+          glm::dvec3 vert=Cells[ci].Positions[vi];
+          x.push_back(vert.x);
+          y.push_back(vert.y);
+          std::vector<glm::dvec3> riji;
+          for(auto& cell : Cells){
+            for(int vj=0;vj<cell.NV;vj++){
+              if(distance(cell.Positions[vj],vert) < Cells[ci].l0){
+                glm::dvec3 rij = cell.Positions[vj] - Cells[ci].Positions[vi];
+                riji.push_back(rij);
+              }
+            }
+          }
+          rijs.push_back(riji);
+        }
+      }
+      double minx = *std::min_element(x.begin(),x.end());
+      double maxx = *std::max_element(x.begin(),x.end());
+      double miny = *std::min_element(y.begin(),y.end());
+      double maxy = *std::min_element(y.begin(),y.end());
+      auto slipForce = [](const glm::dvec3 rij,const double l0,const double f){
+        double ftmp = std::sqrt(glm::dot(rij,rij))/l0;
+        double lifetime = std::exp(std::fabs(ftmp)/f);
+        if(lifetime < 1e-8) return glm::dvec3(0.0);
+        ftmp /= lifetime;
+        return 0.5*std::abs(ftmp)*glm::normalize(rij);
+      };
+      auto catchForce = [](const glm::dvec3 rij,const double l0, const double f){
+        double ftmp = std::sqrt(glm::dot(rij,rij)) / l0;
+        double lifetime = std::exp(-std::fabs(ftmp)/f) * 0.5 * std::exp(-std::pow((std::fabs(ftmp)-f)/f,2));
+        if(lifetime < 1e-8) return glm::dvec3(0.0);
+        ftmp /= lifetime;
+        //std::cout << "catch_"<< rij.x << rij.y << rij.z << std::endl;
+        return 0.5*std::abs(ftmp)*glm::normalize(rij);
+      };
+      
+      int ji = 0;
+      for(int vi=0;vi<Cells[ci].NV;vi++){
+        if(Cells[ci].isJunction[vi]){
+          glm::dvec3 vert=Cells[ci].Positions[vi];
+          std::vector<glm::dvec3> R = rijs[ji];
+          if(vert.x < (Cells[ci].COM.x + minx)/2.0 || vert.x > (Cells[ci].COM.x + maxx)/2.0){
+            for(int ri=0;ri<(int)R.size();ri++){
+              auto force = Kat * catchForce(R[ri],Cells[ci].l0, f0);
+              if(!glm::all(glm::isnan(force))) Cells[ci].Forces[vi] += force;
+            }
+          }
+          if(vert.y < (Cells[ci].COM.y + miny)/2.0 || vert.y > (Cells[ci].COM.y+maxy)/2.0){
+            for(int ri=0;ri<(int)R.size();ri++){
+              auto force = Kat * slipForce(R[ri],Cells[ci].l0, f0);
+              if(!glm::all(glm::isnan(force))) Cells[ci].Forces[vi] += force;
+            }
+          }
+          ji++;
+        }
+      }
+      
+    }
+
+    void Tissue::PolarizedJunctionUpdate(){
+      std::vector<std::thread> threads;
+      for(int i=0;i<NCELLS;i++){
+        threads.push_back(std::thread(&DPM3D::Tissue::PolarizedJunctionForces,this,i));
+      }
+      for(auto& th : threads){
+        th.join();
       }
     }
 

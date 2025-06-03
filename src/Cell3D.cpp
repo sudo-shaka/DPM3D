@@ -837,7 +837,7 @@ namespace DPM3D{
     }
 
     std::array<std::vector<double>,3> Cell::GetForces(){
-      std::array<std::vector<double>,3> OutForces;
+      std::array<std::vector<double>,3> outForces;
       std::vector<double> x,y,z;
       x.resize(NV); y.resize(NV); z.resize(NV);
       for(int vi=0;vi<NV;vi++){
@@ -845,7 +845,10 @@ namespace DPM3D{
         y[vi] = Forces[vi].y;
         z[vi] = Forces[vi].z;
       }
-      return OutForces;
+      outForces[0] = x;
+      outForces[1] = y;
+      outForces[2] = z;
+      return outForces;
     }
 
     std::array<std::vector<double>,2> Cell::getJunctionPoints(){
