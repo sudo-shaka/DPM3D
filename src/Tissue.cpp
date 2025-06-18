@@ -1,6 +1,7 @@
-#include <algorithm>
-#include <glm/vector_relational.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
+#include <algorithm>
+#include <glm/common.hpp>
+#include <glm/vector_relational.hpp>
 #include "Tissue.hpp"
 #include <glm/geometric.hpp>
 #include <vector>
@@ -239,66 +240,25 @@ namespace DPM3D{
         }
       }
     }
-    /*
-    void Tissue::JunctionCatchForceUpdate(int ci){
-      UpdateJunctions();
-      for(int vi=0;vi<Cells[ci].NV;ci++){
-        glm::dvec3 *minrij = NULL;
-        double mindist=Cells[ci].r0*2;
-        if(Cells[ci].isJunction[vi]){
-        for(int cj=0;cj<NCELLS;cj++){
-          if(ci != cj){
-          for(int vj=0;vj<Cells[cj].NV;vj++){
-            if(Cells[cj].isJunction[vj]){
-            glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
-            if(PBC){rij -= L*glm::round(rij/L);};
-            double dist = sqrt(dot(rij,rij));
-            if(dist < mindist){
-              mindist = dist;
-              minrij = &rij;
-            }
-          }
-          if(minrij){
-            glm::dvec3 delta = *minrij;
-            
-            //Cells[ci].Forces[vi] += delta * Kat * 0.5 * (pow(mindist,2));
-            //if(mindist != 0)
-              //Cells[ci].Forces[vi] -= glm::normalize(delta) * Kat * (1.0-mindist)/l0;
-              //Cells[ci].Forces[vi] += glm::normalize(delta) * (Kat * 0.5)/(pow(mindist,2));
-              
-            double sij = sqrt(Cells[ci].a0);
-            double xij = mindist/sij;
-            double ftmp = Kat*(1.0-xij)/sij;
-            Cells[ci].Forces[vi] -= ftmp * normalize(delta);
-          }
-        }
-          }
-        }
-        }
-      }
-    }
-    */
 
     void Tissue::GeneralAttraction(int ci){
       double dist;
       double l0 = Cells[ci].l0;
       for(int vi=0; vi < Cells[ci].NV; vi++){
         for(int cj=0;cj<NCELLS;cj++){
-          if(ci!=cj){
-            for(int vj=0;vj<Cells[cj].NV;vj++){
-              glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
-              if(PBC){
-                rij -= L*glm::round(rij/L);
-              }
-              dist = sqrt(glm::dot(rij,rij));
-              if(dist < l0){
-                Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
-                  glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
-              }
+          if(ci==cj) continue;
+          for(int vj=0;vj<Cells[cj].NV;vj++){
+            glm::dvec3 rij = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
+            if(PBC){
+              rij -= L*glm::round(rij/L);
             }
+            dist = sqrt(glm::dot(rij,rij));
+            if(dist > l0) continue;
+            Cells[ci].Forces[vi] -= Kat * 0.5 * ((dist/l0) - 1.0) *
+              glm::normalize(Cells[cj].Positions[vj]-Cells[ci].Positions[vi]);
           }
         }
-       }
+      }
     }
 
     void Tissue::CellInteractingUpdate(int ci){
@@ -321,7 +281,7 @@ namespace DPM3D{
         if(cj == ci) continue;
         std::vector<double> windingNumbers = findWindingNumber(ci,cj);
         for(int vi=0;vi<Cells[ci].NV;vi++){
-          Cells[ci].Forces[vi] += std::fabs(windingNumbers[vi]) * 0.5 * Kre * (Cells[ci].COM - Cells[ci].Positions[vi]);
+          Cells[ci].Forces[vi] += std::fabs(windingNumbers[vi]) * 0.5 * Kre * glm::normalize(Cells[ci].COM - Cells[ci].Positions[vi]);
         }
       }
     }
@@ -398,7 +358,6 @@ namespace DPM3D{
         double lifetime = std::exp(-std::fabs(ftmp)/f) * 0.5 * std::exp(-std::pow((std::fabs(ftmp)-f)/f,2));
         if(lifetime < 1e-8) return glm::dvec3(0.0);
         ftmp /= lifetime;
-        //std::cout << "catch_"<< rij.x << rij.y << rij.z << std::endl;
         return 0.5*std::abs(ftmp)*glm::normalize(rij);
       };
       
@@ -422,7 +381,6 @@ namespace DPM3D{
           ji++;
         }
       }
-      
     }
 
     void Tissue::PolarizedJunctionUpdate(){
@@ -511,7 +469,6 @@ namespace DPM3D{
       if(PBC){
         shift = L * glm::round((Cells[ci].COM-Cells[cj].COM)/L);
       }
-
       //AABB check first
       glm::dvec3 minA(FLT_MAX), maxA(-FLT_MAX), minB(FLT_MAX), maxB(-FLT_MAX);
       for(const auto& v : Cells[ci].Positions){
@@ -529,7 +486,6 @@ namespace DPM3D{
       bool overlapZ = maxA.z >= minB.z && minA.z <= maxB.z;
       bool BBoverlap = overlapX && overlapY && overlapZ;
       if(!BBoverlap) return windingNumber;
-
       for(int vi=0;vi<Cells[ci].NV;vi++){
         glm::dvec3 point = Cells[ci].Positions[vi] - shift;
         windingNumber[vi] = Cells[cj].WindingNumberOf(point);

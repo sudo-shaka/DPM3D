@@ -107,7 +107,7 @@ namespace DPM3D{
         v0 = (4.0/3.0)*M_PI*pow(r0,3);
         s0 = pow((6*sqrt(M_PI)*v0*calA0),(2.0/3.0));
         a0 = (s0/(double)ntriangles);
-        l0 = sqrt((a0)/sqrt(3));      
+        l0 = r0/5;      
         COM = GetCOM();
         for(i=0;i<NV;i++){
             Positions[i] *= r0;
@@ -813,7 +813,6 @@ namespace DPM3D{
 
       double windingNumber = totalOmega / (4.0 * M_PI);
       return windingNumber;
-      
     }
 
     bool Cell::pointInside(glm::dvec3 point){

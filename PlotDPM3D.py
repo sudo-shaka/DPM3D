@@ -91,7 +91,6 @@ def plotjunction2D(Tissue):
                     f = abs(cell.Forces[tri[i]].x) + abs(cell.Forces[tri[i]].y) + abs(cell.Forces[tri[i]].z)
                     plt.scatter(np.mod(cell.Positions[tri[i]].x,Tissue.L),np.mod(cell.Positions[tri[i]].y,Tissue.L),c=f,cmap = 'coolwarm')
 
-
 def plottissue2D(Tissue):
     plt.figure(figsize=(10,10))
     random.seed(1)
@@ -105,11 +104,11 @@ def plottissue2D(Tissue):
         x,y = pos[0], pos[1]
         if(Tissue.PBC):
             x,y = np.mod(pos[0],Tissue.L), np.mod(pos[1],Tissue.L)
+        plt.scatter(x,y,s=3, color = (r1[ci],r2[ci],r3[ci]))
         for tri in Tissue.Cells[ci].TriangleIndex:
             vx,vy = [x[i] for i in tri], [y[i] for i in tri]
             if max(vx) - min(vx) <= Tissue.L/2 and max(vy) - min(vy) <= Tissue.L/2:
                 plt.plot(vx,vy, color = (r1[ci],r2[ci],r3[ci]))
-            plt.scatter(x,y,s=3, color = (r1[ci],r2[ci],r3[ci]))
     if(Tissue.PBC):
         plt.xlim([0,Tissue.L])
         plt.ylim([0,Tissue.L])
