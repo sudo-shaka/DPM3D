@@ -36,6 +36,8 @@ namespace DPM3D {
             std::vector<std::vector<int>> FaceIndices;
             std::vector<bool> isJunction;
             std::vector<bool> isFocalAdh;
+            std::vector<int> nearestCell;
+            std::vector<int> nearestVert;
 
             Cell(double x1,double y1, double z1,
                 double calA0,int f,double r0,

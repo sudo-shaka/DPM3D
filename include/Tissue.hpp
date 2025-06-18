@@ -43,6 +43,8 @@ namespace DPM3D{
         void GeneralAttraction(int ci);//Attraction method for cell (ci)
         std::vector<std::vector<double>> GetVesselPosition(int ci); //Takes cells attached to z=0 surface with PBC to make a cylindircal surface of cells (plotting plane as a vessel)
         void applyShearStress(std::array<double,3> fluidVelocity, double viscosity, double velocityGradient, double stiffness); //Apply a shear force over the faces of the cells going from the x direction
+        void nearestNeighborUpdate(int ci);
+        void PinnedForceUpdate(int ci);
         void ExportForces(std::string);
         void ExportPositions(std::string);
     };

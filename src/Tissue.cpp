@@ -393,6 +393,30 @@ namespace DPM3D{
       }
     }
 
+    void Tissue::nearestNeighborUpdate(int ci){
+      UpdateJunctions();
+      double mindist = FLT_MAX;
+      for(int vi=0; vi<Cells[vi].NV;vi++){
+        if(!Cells[ci].isJunction[vi]) continue;
+        for(int cj=0;cj<NCELLS;cj++){
+          if(ci==cj) continue;
+          for(int vj=0;vj<Cells[cj].NV;vj++){
+            if(!Cells[cj].isJunction[vj]) continue;
+            double dist = distance(Cells[cj].Positions[vi],Cells[ci].Positions[vi]);
+            if(dist < mindist){
+              mindist = dist;
+              Cells[ci].nearestCell[vi] = cj;
+              Cells[ci].nearestVert[vi] = vj;
+            }
+          }
+        }
+      }
+    }
+
+    void Tissue::PinnedForceUpdate(int ci){
+      //start working here
+    }
+
     void Tissue::EulerUpdate(int steps, double dt){
         int step;
         for(step=0;step<steps;step++)

@@ -102,6 +102,8 @@ namespace DPM3D{
         Forces.resize(NV);
         isJunction.resize(NV);
         isFocalAdh.resize(NV);
+        nearestCell.resize(NV);
+        nearestVert.resize(NV);
         ntriangles = FaceIndices.size();
 
         v0 = (4.0/3.0)*M_PI*pow(r0,3);
