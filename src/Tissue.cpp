@@ -268,6 +268,7 @@ namespace DPM3D{
         else if(attactionMethod == "JunctionCatch") JunctionCatchForceUpdate(ci);
         else if(attactionMethod == "General") GeneralAttraction(ci);
         else if(attactionMethod == "PolarizedJunction") PolarizedJunctionForces(ci);
+        else if(attactionMethod == "Pinned") PinnedForceUpdate(ci);
         else std::cerr << attactionMethod
               << " is not a valid attaction method\n" 
               << "Please use JunctionSlip, JunctionCatch, or General" 
@@ -394,27 +395,41 @@ namespace DPM3D{
     }
 
     void Tissue::nearestNeighborUpdate(int ci){
-      UpdateJunctions();
-      double mindist = FLT_MAX;
-      for(int vi=0; vi<Cells[vi].NV;vi++){
-        if(!Cells[ci].isJunction[vi]) continue;
+      for(int vi=0; vi<Cells[ci].NV;vi++){
+        double mindist = FLT_MAX;
         for(int cj=0;cj<NCELLS;cj++){
           if(ci==cj) continue;
           for(int vj=0;vj<Cells[cj].NV;vj++){
-            if(!Cells[cj].isJunction[vj]) continue;
-            double dist = distance(Cells[cj].Positions[vi],Cells[ci].Positions[vi]);
-            if(dist < mindist){
-              mindist = dist;
-              Cells[ci].nearestCell[vi] = cj;
-              Cells[ci].nearestVert[vi] = vj;
-            }
+            glm::dvec3 rij  = Cells[cj].Positions[vj] - Cells[ci].Positions[vi];
+            if(PBC) rij -= L * glm::round(rij/L);
+            double dist = glm::abs(glm::dot(rij,rij));
+            if(mindist < dist) continue;
+            mindist = dist;
+            Cells[ci].nearestCell[vi] = cj;
+            Cells[ci].nearestVert[vi] = vj;
           }
         }
+        //std::cout << "vi: " << vi << " cj: " << Cells[ci].nearestCell[vi] << " vj: " << Cells[ci].nearestVert[vi] << std::endl;
       }
     }
 
     void Tissue::PinnedForceUpdate(int ci){
-      //start working here
+      UpdateJunctions();
+      for(int vi=0;vi<Cells[ci].NV;vi++){
+        if(!Cells[ci].isJunction[vi]) continue;
+        int cj = Cells[ci].nearestCell[vi];
+        int vj = Cells[ci].nearestVert[vi];
+        glm::dvec3 nearestPoint = Cells[cj].Positions[vj];
+        glm::dvec3 rij = nearestPoint - Cells[ci].Positions[vi];
+        if(PBC) rij -= L * glm::round(rij/L);
+        double distance = std::abs(sqrt(glm::dot(rij,rij)));
+        if(distance > Cells[ci].l0) continue;
+        double xij = distance/sqrt(Cells[ci].l0);
+        double ftmp = Kat * (1.0  - xij)/Cells[ci].l0;
+        glm::dvec3 force = ftmp *0.5* glm::normalize(rij);
+        if(!glm::all(glm::isnan(force))) Cells[ci].Forces[vi] += force;
+        Cells[ci].Forces[vi] += force;
+      }
     }
 
     void Tissue::EulerUpdate(int steps, double dt){
